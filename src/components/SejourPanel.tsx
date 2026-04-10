@@ -59,6 +59,13 @@ export default function SejourPanel({
     return map;
   }, [familles]);
 
+  // Sync preselectedFamilleId into state when panel opens
+  useEffect(() => {
+    if (!isEditing && preselectedFamilleId) {
+      setSelectedFamilleId(preselectedFamilleId);
+    }
+  }, [preselectedFamilleId, isEditing]);
+
   useEffect(() => {
     if (editingSejour) {
       setArrivee(editingSejour.arrivee.split('T')[0]);
