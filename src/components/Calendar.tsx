@@ -273,6 +273,7 @@ export default function Calendar() {
           <MonthView
             currentDate={currentDate}
             sejours={sejours}
+            membres={membres}
             onSelectDates={handleSelectDates}
             onEditSejour={handleEditSejour}
           />
