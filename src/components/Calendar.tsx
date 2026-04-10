@@ -95,6 +95,12 @@ export default function Calendar() {
     await fetchSejours();
   }, [fetchSejours]);
 
+  // Refresh only members (without closing panel)
+  const refreshMembres = useCallback(async () => {
+    const mem = await fetch('/api/membres').then((r) => r.json());
+    setMembres(mem);
+  }, []);
+
   // Navigation
   const goNext = () => {
     setCurrentDate((d) => addMonths(d, viewMode === 'month' ? 1 : 0));
@@ -320,6 +326,7 @@ export default function Calendar() {
           onCreated={handleCreated}
           onUpdated={handleUpdated}
           onDeleted={handleDeleted}
+          onRefreshMembres={refreshMembres}
         />
       )}
 

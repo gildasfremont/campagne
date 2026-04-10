@@ -15,6 +15,7 @@ interface SejourPanelProps {
   onCreated: () => void;
   onUpdated: () => void;
   onDeleted: (sejour: SejourWithDetails) => void;
+  onRefreshMembres: () => void;
 }
 
 export default function SejourPanel({
@@ -28,6 +29,7 @@ export default function SejourPanel({
   onCreated,
   onUpdated,
   onDeleted,
+  onRefreshMembres,
 }: SejourPanelProps) {
   const isEditing = !!editingSejour;
 
@@ -118,8 +120,8 @@ export default function SejourPanel({
         const created = await res.json();
         setSelectedMembreIds((prev) => new Set(prev).add(created.id));
         setNewMembreName('');
-        // Trigger a refresh so the new member appears
-        onCreated();
+        // Refresh members list without closing the panel
+        onRefreshMembres();
       }
     } catch (err) {
       console.error('Error adding member:', err);
