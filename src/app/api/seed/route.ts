@@ -2,14 +2,24 @@ import { NextResponse } from 'next/server';
 import { sql, initDatabase } from '@/lib/db';
 import { FAMILLES_SEED } from '@/lib/seed-data';
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     await initDatabase();
 
+    const { searchParams } = new URL(request.url);
+    const force = searchParams.get('force') === 'true';
+
     // Check if already seeded
     const existing = await sql`SELECT COUNT(*) as count FROM familles`;
-    if (Number(existing.rows[0].count) > 0) {
-      return NextResponse.json({ message: 'Already seeded' });
+    if (Number(existing.rows[0].count) > 0 && !force) {
+      return NextResponse.json({ message: 'Already seeded. Use ?force=true to reset.' });
+    }
+
+    if (force) {
+      await sql`DELETE FROM affectations`;
+      await sql`DELETE FROM sejours`;
+      await sql`DELETE FROM membres`;
+      await sql`DELETE FROM familles`;
     }
 
     for (const f of FAMILLES_SEED) {
