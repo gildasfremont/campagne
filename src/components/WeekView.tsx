@@ -74,10 +74,6 @@ export default function WeekView({ currentDate, sejours, onEditSejour }: WeekVie
                     onClick={() => onEditSejour(s)}
                     className="w-full text-left flex items-center gap-1.5 px-1.5 py-0.5 rounded text-xs hover:bg-gray-100 transition-colors"
                   >
-                    <span
-                      className="w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: s.couleur }}
-                    />
                     <span className="text-gray-800 truncate">{s.prenom}</span>
                     <span className="text-gray-400 truncate text-[10px]">{s.famille_nom}</span>
                   </button>
