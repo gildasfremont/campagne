@@ -255,6 +255,7 @@ export default function MonthView({ currentDate, sejours, membres, onSelectDates
                           backgroundColor: sejour.couleur,
                           opacity: 0.7,
                         }}
+                        onMouseDown={(e) => e.stopPropagation()}
                         onClick={() => onEditSejour(sejour)}
                         title={`${sejour.prenom} — ${sejour.arrivee.split('T')[0]} → ${sejour.depart.split('T')[0]}${sejour.remarque ? ` (${sejour.remarque})` : ''}`}
                       />
