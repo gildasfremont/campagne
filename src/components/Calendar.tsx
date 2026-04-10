@@ -252,6 +252,15 @@ export default function Calendar() {
         </div>
       </div>
 
+      {/* Occupancy legend */}
+      <div className="flex flex-wrap gap-3 mb-3 text-xs text-gray-500">
+        <span className="font-medium">Occupation :</span>
+        <span><span className="inline-block w-2 h-2 rounded-sm bg-[#22c55e] mr-1" />&le; 17 confortable</span>
+        <span><span className="inline-block w-2 h-2 rounded-sm bg-[#f59e0b] mr-1" />18-27 grande maison</span>
+        <span><span className="inline-block w-2 h-2 rounded-sm bg-[#ef4444] mr-1" />28-32 on s&apos;arrange</span>
+        <span><span className="inline-block w-2 h-2 rounded-sm bg-[#991b1b] mr-1" />&gt; 32 dépassement</span>
+      </div>
+
       {/* Calendar view */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         {loading ? (
