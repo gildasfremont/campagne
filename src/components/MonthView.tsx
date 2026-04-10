@@ -17,7 +17,7 @@ interface MonthViewProps {
   currentDate: Date;
   sejours: SejourWithDetails[];
   membres: MembreWithFamille[];
-  onSelectDates: (start: Date, end: Date) => void;
+  onSelectDates: (start: Date, end: Date, membreId?: string) => void;
   onEditSejour: (sejour: SejourWithDetails) => void;
 }
 
@@ -35,6 +35,7 @@ export default function MonthView({ currentDate, sejours, membres, onSelectDates
   const [selectionStart, setSelectionStart] = useState<number | null>(null);
   const [selectionEnd, setSelectionEnd] = useState<number | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
+  const [selectionMembreId, setSelectionMembreId] = useState<string | null>(null);
 
   // Calculate nightly occupancy for each day
   const occupancy = useMemo(() => {
@@ -101,10 +102,11 @@ export default function MonthView({ currentDate, sejours, membres, onSelectDates
     return groups;
   }, [rows]);
 
-  const handleDayMouseDown = useCallback((dayIndex: number) => {
+  const handleDayMouseDown = useCallback((dayIndex: number, membreId?: string) => {
     setIsSelecting(true);
     setSelectionStart(dayIndex);
     setSelectionEnd(dayIndex);
+    setSelectionMembreId(membreId ?? null);
   }, []);
 
   const handleDayMouseEnter = useCallback((dayIndex: number) => {
@@ -117,12 +119,13 @@ export default function MonthView({ currentDate, sejours, membres, onSelectDates
     if (isSelecting && selectionStart !== null && selectionEnd !== null) {
       const start = Math.min(selectionStart, selectionEnd);
       const end = Math.max(selectionStart, selectionEnd);
-      onSelectDates(days[start], days[end]);
+      onSelectDates(days[start], days[end], selectionMembreId ?? undefined);
     }
     setIsSelecting(false);
     setSelectionStart(null);
     setSelectionEnd(null);
-  }, [isSelecting, selectionStart, selectionEnd, days, onSelectDates]);
+    setSelectionMembreId(null);
+  }, [isSelecting, selectionStart, selectionEnd, selectionMembreId, days, onSelectDates]);
 
   const getSelectionRange = () => {
     if (selectionStart === null || selectionEnd === null) return { start: -1, end: -1 };
@@ -149,7 +152,7 @@ export default function MonthView({ currentDate, sejours, membres, onSelectDates
             const dateStr = formatDateParam(day);
             const isToday = dateStr === today;
             const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-            const isSelected = i >= sel.start && i <= sel.end;
+            const isSelected = i >= sel.start && i <= sel.end && selectionMembreId === null;
             return (
               <div
                 key={dateStr}
@@ -210,12 +213,18 @@ export default function MonthView({ currentDate, sejours, membres, onSelectDates
                   </span>
                 </div>
                 <div className="flex flex-1 relative">
-                  {days.map((day) => {
+                  {days.map((day, i) => {
                     const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+                    const isSelected = selectionMembreId === member.id && i >= sel.start && i <= sel.end;
                     return (
                       <div
                         key={formatDateParam(day)}
-                        className={`flex-1 min-w-[38px] border-r border-gray-100 last:border-r-0 ${isWeekend ? 'bg-gray-50/50' : ''}`}
+                        className={`flex-1 min-w-[38px] border-r border-gray-100 last:border-r-0 cursor-pointer
+                          ${isWeekend ? 'bg-gray-50/50' : ''}
+                          ${isSelected ? 'bg-blue-100' : ''}
+                        `}
+                        onMouseDown={() => handleDayMouseDown(i, member.id)}
+                        onMouseEnter={() => handleDayMouseEnter(i)}
                       />
                     );
                   })}

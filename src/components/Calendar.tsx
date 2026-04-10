@@ -112,10 +112,19 @@ export default function Calendar() {
 
   const goToday = () => setCurrentDate(new Date());
 
+  // Pre-selected family (when user drags on a member row)
+  const [preselectedFamilleId, setPreselectedFamilleId] = useState<string | null>(null);
+
   // Date selection for creating sejours
-  const handleSelectDates = (start: Date, end: Date) => {
+  const handleSelectDates = (start: Date, end: Date, membreId?: string) => {
     setSelectedDates({ start, end });
     setEditingSejour(null);
+    if (membreId) {
+      const membre = membres.find((m) => m.id === membreId);
+      setPreselectedFamilleId(membre?.famille_id ?? null);
+    } else {
+      setPreselectedFamilleId(null);
+    }
     setShowPanel(true);
   };
 
@@ -131,6 +140,7 @@ export default function Calendar() {
     setShowPanel(false);
     setEditingSejour(null);
     setSelectedDates(null);
+    setPreselectedFamilleId(null);
   };
 
   const handleCreated = () => {
@@ -305,6 +315,7 @@ export default function Calendar() {
           selectedDates={selectedDates}
           editingSejour={editingSejour}
           currentMembreId={currentMembreId}
+          preselectedFamilleId={preselectedFamilleId}
           onClose={handlePanelClose}
           onCreated={handleCreated}
           onUpdated={handleUpdated}
