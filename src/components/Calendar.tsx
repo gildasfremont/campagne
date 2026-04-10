@@ -252,19 +252,6 @@ export default function Calendar() {
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap gap-3 mb-3 text-xs text-gray-500">
-        {Array.from(new Set(sejours.map((s) => s.branche))).map((branche) => {
-          const color = sejours.find((s) => s.branche === branche)?.couleur;
-          return (
-            <div key={branche} className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-              {branche}
-            </div>
-          );
-        })}
-      </div>
-
       {/* Calendar view */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         {loading ? (

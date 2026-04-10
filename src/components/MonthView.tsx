@@ -192,11 +192,7 @@ export default function MonthView({ currentDate, sejours, membres, onSelectDates
           <div key={group.branche}>
             {/* Branche header */}
             <div className="flex border-b border-gray-200 bg-gray-50">
-              <div className="w-32 shrink-0 px-2 py-1 flex items-center gap-1.5">
-                <span
-                  className="w-2.5 h-2.5 rounded-full shrink-0"
-                  style={{ backgroundColor: group.couleur }}
-                />
+              <div className="w-32 shrink-0 px-2 py-1 flex items-center">
                 <span className="text-xs font-semibold text-gray-600">{group.branche}</span>
               </div>
               <div className="flex-1" />
