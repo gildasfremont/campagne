@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useCallback } from 'react';
-import { SejourWithDetails } from '@/lib/types';
+import { MembreWithFamille, SejourWithDetails } from '@/lib/types';
 import {
   getMonthDays,
   format,
@@ -16,18 +16,21 @@ import OccupancyBadge from './OccupancyBadge';
 interface MonthViewProps {
   currentDate: Date;
   sejours: SejourWithDetails[];
+  membres: MembreWithFamille[];
   onSelectDates: (start: Date, end: Date) => void;
   onEditSejour: (sejour: SejourWithDetails) => void;
 }
 
-// Group sejours by branche for row layout
-interface BrancheRow {
+interface MembreRow {
+  id: string;
+  prenom: string;
+  famille_nom: string;
   branche: string;
   couleur: string;
   sejours: SejourWithDetails[];
 }
 
-export default function MonthView({ currentDate, sejours, onSelectDates, onEditSejour }: MonthViewProps) {
+export default function MonthView({ currentDate, sejours, membres, onSelectDates, onEditSejour }: MonthViewProps) {
   const days = useMemo(() => getMonthDays(currentDate), [currentDate]);
   const [selectionStart, setSelectionStart] = useState<number | null>(null);
   const [selectionEnd, setSelectionEnd] = useState<number | null>(null);
@@ -40,18 +43,63 @@ export default function MonthView({ currentDate, sejours, onSelectDates, onEditS
     });
   }, [days, sejours]);
 
-  // Group sejours into rows by branche+famille
+  // Build rows: all members, grouped by branche, with their sejours
   const rows = useMemo(() => {
-    const brancheMap = new Map<string, BrancheRow>();
+    const sejoursByMembre = new Map<string, SejourWithDetails[]>();
     for (const s of sejours) {
-      const key = s.branche;
-      if (!brancheMap.has(key)) {
-        brancheMap.set(key, { branche: s.branche, couleur: s.couleur, sejours: [] });
-      }
-      brancheMap.get(key)!.sejours.push(s);
+      if (!sejoursByMembre.has(s.membre_id)) sejoursByMembre.set(s.membre_id, []);
+      sejoursByMembre.get(s.membre_id)!.push(s);
     }
-    return Array.from(brancheMap.values());
-  }, [sejours]);
+
+    const memberRows: MembreRow[] = membres
+      .filter((m) => m.est_permanent)
+      .map((m) => ({
+        id: m.id,
+        prenom: m.prenom,
+        famille_nom: m.famille_nom,
+        branche: m.branche,
+        couleur: m.couleur,
+        sejours: sejoursByMembre.get(m.id) || [],
+      }));
+
+    // Also add non-permanent members who have sejours this month
+    for (const [membreId, mSejours] of sejoursByMembre.entries()) {
+      if (!memberRows.find((r) => r.id === membreId)) {
+        const s = mSejours[0];
+        memberRows.push({
+          id: membreId,
+          prenom: s.prenom,
+          famille_nom: s.famille_nom,
+          branche: s.branche,
+          couleur: s.couleur,
+          sejours: mSejours,
+        });
+      }
+    }
+
+    // Sort by branche, then famille, then prenom
+    memberRows.sort((a, b) => {
+      if (a.branche !== b.branche) return a.branche.localeCompare(b.branche);
+      if (a.famille_nom !== b.famille_nom) return a.famille_nom.localeCompare(b.famille_nom);
+      return a.prenom.localeCompare(b.prenom);
+    });
+
+    return memberRows;
+  }, [membres, sejours]);
+
+  // Group rows by branche for section headers
+  const brancheGroups = useMemo(() => {
+    const groups: { branche: string; couleur: string; rows: MembreRow[] }[] = [];
+    let current: (typeof groups)[0] | null = null;
+    for (const row of rows) {
+      if (!current || current.branche !== row.branche) {
+        current = { branche: row.branche, couleur: row.couleur, rows: [] };
+        groups.push(current);
+      }
+      current.rows.push(row);
+    }
+    return groups;
+  }, [rows]);
 
   const handleDayMouseDown = useCallback((dayIndex: number) => {
     setIsSelecting(true);
@@ -96,7 +144,7 @@ export default function MonthView({ currentDate, sejours, onSelectDates, onEditS
       <div className="min-w-[800px]">
         {/* Day headers */}
         <div className="flex border-b border-gray-200">
-          <div className="w-28 shrink-0" />
+          <div className="w-32 shrink-0" />
           {days.map((day, i) => {
             const dateStr = formatDateParam(day);
             const isToday = dateStr === today;
@@ -126,7 +174,7 @@ export default function MonthView({ currentDate, sejours, onSelectDates, onEditS
 
         {/* Occupancy row */}
         <div className="flex border-b border-gray-300">
-          <div className="w-28 shrink-0 px-2 py-1 text-xs text-gray-500 font-medium flex items-center">
+          <div className="w-32 shrink-0 px-2 py-1 text-xs text-gray-500 font-medium flex items-center">
             Couchages
           </div>
           {days.map((day, i) => (
@@ -139,29 +187,31 @@ export default function MonthView({ currentDate, sejours, onSelectDates, onEditS
           ))}
         </div>
 
-        {/* Sejour rows by branche */}
-        {rows.map((row) => {
-          // Collect unique members within this branche
-          const memberSejours = new Map<string, SejourWithDetails[]>();
-          for (const s of row.sejours) {
-            const key = s.membre_id;
-            if (!memberSejours.has(key)) memberSejours.set(key, []);
-            memberSejours.get(key)!.push(s);
-          }
+        {/* Members grouped by branche */}
+        {brancheGroups.map((group) => (
+          <div key={group.branche}>
+            {/* Branche header */}
+            <div className="flex border-b border-gray-200 bg-gray-50">
+              <div className="w-32 shrink-0 px-2 py-1 flex items-center gap-1.5">
+                <span
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                  style={{ backgroundColor: group.couleur }}
+                />
+                <span className="text-xs font-semibold text-gray-600">{group.branche}</span>
+              </div>
+              <div className="flex-1" />
+            </div>
 
-          return Array.from(memberSejours.entries()).map(([membreId, mSejours]) => {
-            const firstSejour = mSejours[0];
-            return (
-              <div key={membreId} className="flex border-b border-gray-100 hover:bg-gray-50/50">
+            {/* Member rows */}
+            {group.rows.map((member) => (
+              <div key={member.id} className="flex border-b border-gray-100 hover:bg-gray-50/50">
                 <div
-                  className="w-28 shrink-0 px-2 py-1.5 text-xs truncate flex items-center gap-1"
-                  title={`${firstSejour.prenom} ${firstSejour.famille_nom}`}
+                  className="w-32 shrink-0 px-2 py-1.5 text-xs truncate flex items-center gap-1"
+                  title={`${member.prenom} ${member.famille_nom}`}
                 >
-                  <span
-                    className="w-2 h-2 rounded-full shrink-0"
-                    style={{ backgroundColor: firstSejour.couleur }}
-                  />
-                  <span className="text-gray-700 truncate">{firstSejour.prenom}</span>
+                  <span className="text-gray-700 truncate">
+                    {member.prenom} <span className="text-gray-400">{member.famille_nom}</span>
+                  </span>
                 </div>
                 <div className="flex flex-1 relative">
                   {days.map((day) => {
@@ -174,13 +224,12 @@ export default function MonthView({ currentDate, sejours, onSelectDates, onEditS
                     );
                   })}
                   {/* Render sejour bars as absolute overlays */}
-                  {mSejours.map((sejour) => {
+                  {member.sejours.map((sejour) => {
                     const arrDate = parseISO(sejour.arrivee);
                     const depDate = parseISO(sejour.depart);
                     const monthStart = days[0];
                     const monthEnd = days[days.length - 1];
 
-                    // Clamp to visible range
                     const visStart = arrDate < monthStart ? monthStart : arrDate;
                     const visEnd = depDate > monthEnd ? monthEnd : depDate;
 
@@ -208,14 +257,14 @@ export default function MonthView({ currentDate, sejours, onSelectDates, onEditS
                   })}
                 </div>
               </div>
-            );
-          });
-        })}
+            ))}
+          </div>
+        ))}
 
         {/* Empty state */}
-        {sejours.length === 0 && (
+        {membres.length === 0 && (
           <div className="py-12 text-center text-gray-400 text-sm">
-            Aucun séjour ce mois-ci. Sélectionnez des dates pour en créer un.
+            Aucun membre. Lancez le seed pour initialiser les données.
           </div>
         )}
       </div>
