@@ -10,6 +10,7 @@ interface SejourPanelProps {
   selectedDates: { start: Date; end: Date } | null;
   editingSejour: SejourWithDetails | null;
   currentMembreId: string | null;
+  preselectedFamilleId?: string | null;
   onClose: () => void;
   onCreated: () => void;
   onUpdated: () => void;
@@ -22,6 +23,7 @@ export default function SejourPanel({
   selectedDates,
   editingSejour,
   currentMembreId,
+  preselectedFamilleId,
   onClose,
   onCreated,
   onUpdated,
@@ -31,7 +33,7 @@ export default function SejourPanel({
 
   // Find the current user's famille
   const currentMembre = membres.find((m) => m.id === currentMembreId);
-  const defaultFamilleId = currentMembre?.famille_id || familles[0]?.id || '';
+  const defaultFamilleId = preselectedFamilleId || currentMembre?.famille_id || familles[0]?.id || '';
 
   const [selectedFamilleId, setSelectedFamilleId] = useState(defaultFamilleId);
   const [selectedMembreIds, setSelectedMembreIds] = useState<Set<string>>(new Set());
