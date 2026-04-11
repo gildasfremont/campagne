@@ -24,7 +24,8 @@ export default function Toast({ message, onUndo, onDismiss, duration = 5000 }: T
       }
     }, 50);
     return () => clearInterval(interval);
-  }, [duration, onDismiss]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [duration]);
 
   return (
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 min-w-[300px]">

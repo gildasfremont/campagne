@@ -4,7 +4,7 @@ import { sql } from '@/lib/db';
 export async function GET() {
   try {
     const result = await sql`
-      SELECT m.id, m.famille_id, m.prenom, m.est_permanent,
+      SELECT m.id, m.famille_id, m.prenom, m.est_permanent, m.est_cache,
              f.nom as famille_nom, f.branche, f.couleur
       FROM membres m
       JOIN familles f ON f.id = m.famille_id

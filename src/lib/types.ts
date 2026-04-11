@@ -10,6 +10,7 @@ export interface Membre {
   famille_id: string;
   prenom: string;
   est_permanent: boolean;
+  est_cache: boolean;
 }
 
 export interface MembreWithFamille extends Membre {

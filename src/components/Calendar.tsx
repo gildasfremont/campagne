@@ -17,6 +17,7 @@ import {
 import MonthView from './MonthView';
 import WeekView from './WeekView';
 import SejourPanel from './SejourPanel';
+import MembresPanel from './MembresPanel';
 import Toast from './Toast';
 
 type ViewMode = 'month' | 'week';
@@ -37,8 +38,14 @@ export default function Calendar() {
   // localStorage identity
   const [currentMembreId, setCurrentMembreId] = useState<string | null>(null);
 
+  // Membres panel
+  const [showMembresPanel, setShowMembresPanel] = useState(false);
+
   // Undo toast
   const [deletedSejour, setDeletedSejour] = useState<SejourWithDetails | null>(null);
+
+  // Filter hidden members for calendar display
+  const visibleMembres = membres.filter((m) => !m.est_cache);
 
   // Load identity from localStorage
   useEffect(() => {
@@ -59,6 +66,8 @@ export default function Calendar() {
     ]).then(([fam, mem]) => {
       setFamilles(fam);
       setMembres(mem);
+    }).catch((err) => {
+      console.error('Error fetching familles/membres:', err);
     });
   }, []);
 
@@ -167,7 +176,7 @@ export default function Calendar() {
     // Actually delete after toast timeout (unless undone)
   };
 
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = useCallback(async () => {
     if (!deletedSejour) return;
     try {
       await fetch(`/api/sejours/${deletedSejour.id}`, { method: 'DELETE' });
@@ -175,7 +184,7 @@ export default function Calendar() {
       console.error('Error deleting:', err);
     }
     setDeletedSejour(null);
-  };
+  }, [deletedSejour]);
 
   const handleUndoDelete = () => {
     // Restore the sejour in the list
@@ -199,8 +208,18 @@ export default function Calendar() {
           <p className="text-sm text-gray-500">Calendrier de la maison</p>
         </div>
 
-        {/* Identity selector */}
+        {/* Identity selector + members management */}
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowMembresPanel(true)}
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700"
+            aria-label="Gérer les membres"
+            title="Gérer les membres"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+            </svg>
+          </button>
           <label className="text-xs text-gray-500">Qui êtes-vous ?</label>
           <select
             value={currentMembreId || ''}
@@ -208,7 +227,7 @@ export default function Calendar() {
             className="border border-gray-300 rounded-lg px-2 py-1 text-sm text-gray-700 max-w-[180px]"
           >
             <option value="">Choisir...</option>
-            {membres
+            {visibleMembres
               .filter((m) => m.est_permanent)
               .map((m) => (
                 <option key={m.id} value={m.id}>
@@ -285,7 +304,7 @@ export default function Calendar() {
           <MonthView
             currentDate={currentDate}
             sejours={sejours}
-            membres={membres}
+            membres={visibleMembres}
             onSelectDates={handleSelectDates}
             onEditSejour={handleEditSejour}
           />
@@ -298,7 +317,7 @@ export default function Calendar() {
         )}
       </div>
 
-      {/* Mobile fab to create sejour */}
+      {/* FAB to create sejour in week view */}
       {viewMode === 'week' && (
         <button
           onClick={() => {
@@ -306,7 +325,7 @@ export default function Calendar() {
             setEditingSejour(null);
             setShowPanel(true);
           }}
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center text-2xl hover:bg-blue-700 sm:hidden z-30"
+          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center text-2xl hover:bg-blue-700 z-30"
           aria-label="Nouveau séjour"
         >
           +
@@ -317,7 +336,7 @@ export default function Calendar() {
       {showPanel && (
         <SejourPanel
           familles={familles}
-          membres={membres}
+          membres={visibleMembres}
           selectedDates={selectedDates}
           editingSejour={editingSejour}
           currentMembreId={currentMembreId}
@@ -327,6 +346,16 @@ export default function Calendar() {
           onUpdated={handleUpdated}
           onDeleted={handleDeleted}
           onRefreshMembres={refreshMembres}
+        />
+      )}
+
+      {/* Membres management panel */}
+      {showMembresPanel && (
+        <MembresPanel
+          familles={familles}
+          membres={membres}
+          onClose={() => setShowMembresPanel(false)}
+          onRefresh={refreshMembres}
         />
       )}
 
