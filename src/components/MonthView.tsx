@@ -64,8 +64,10 @@ export default function MonthView({ currentDate, sejours, membres, onSelectDates
       }));
 
     // Also add non-permanent members who have sejours this month
+    // (only if they're in the visible membres list — hidden members are excluded)
+    const visibleIds = new Set(membres.map((m) => m.id));
     for (const [membreId, mSejours] of sejoursByMembre.entries()) {
-      if (!memberRows.find((r) => r.id === membreId)) {
+      if (!memberRows.find((r) => r.id === membreId) && visibleIds.has(membreId)) {
         const s = mSejours[0];
         memberRows.push({
           id: membreId,

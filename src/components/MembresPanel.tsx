@@ -167,14 +167,14 @@ export default function MembresPanel({ familles, membres, onClose, onRefresh }: 
                             </span>
                             <button
                               onClick={() => startEdit(m)}
-                              className="text-xs text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="text-xs text-gray-400 hover:text-gray-600 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                             >
                               Modifier
                             </button>
                             <button
                               onClick={() => toggleCache(m)}
                               disabled={loading === m.id}
-                              className="text-xs text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="text-xs text-gray-400 hover:text-gray-600 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                             >
                               {m.est_cache ? 'Afficher' : 'Cacher'}
                             </button>
