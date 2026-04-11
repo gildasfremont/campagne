@@ -19,6 +19,11 @@ export async function initDatabase() {
     )
   `;
 
+  // Migration: add est_cache column
+  await sql`
+    ALTER TABLE membres ADD COLUMN IF NOT EXISTS est_cache BOOLEAN NOT NULL DEFAULT false
+  `;
+
   await sql`
     CREATE TABLE IF NOT EXISTS sejours (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
