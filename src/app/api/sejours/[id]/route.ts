@@ -14,7 +14,7 @@ export async function PATCH(
       UPDATE sejours
       SET arrivee = COALESCE(${arrivee}::date, arrivee),
           depart = COALESCE(${depart}::date, depart),
-          remarque = COALESCE(${remarque}, remarque)
+          remarque = ${remarque}
       WHERE id = ${id}::uuid
       RETURNING *
     `;

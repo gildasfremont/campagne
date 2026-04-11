@@ -59,6 +59,8 @@ export default function Calendar() {
     ]).then(([fam, mem]) => {
       setFamilles(fam);
       setMembres(mem);
+    }).catch((err) => {
+      console.error('Error fetching familles/membres:', err);
     });
   }, []);
 
@@ -167,7 +169,7 @@ export default function Calendar() {
     // Actually delete after toast timeout (unless undone)
   };
 
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = useCallback(async () => {
     if (!deletedSejour) return;
     try {
       await fetch(`/api/sejours/${deletedSejour.id}`, { method: 'DELETE' });
@@ -175,7 +177,7 @@ export default function Calendar() {
       console.error('Error deleting:', err);
     }
     setDeletedSejour(null);
-  };
+  }, [deletedSejour]);
 
   const handleUndoDelete = () => {
     // Restore the sejour in the list
@@ -298,7 +300,7 @@ export default function Calendar() {
         )}
       </div>
 
-      {/* Mobile fab to create sejour */}
+      {/* FAB to create sejour in week view */}
       {viewMode === 'week' && (
         <button
           onClick={() => {
@@ -306,7 +308,7 @@ export default function Calendar() {
             setEditingSejour(null);
             setShowPanel(true);
           }}
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center text-2xl hover:bg-blue-700 sm:hidden z-30"
+          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center text-2xl hover:bg-blue-700 z-30"
           aria-label="Nouveau séjour"
         >
           +
