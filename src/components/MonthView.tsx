@@ -75,31 +75,36 @@ export default function MonthView({ currentDate, sejours, membres, onlyWithSejou
         sejours: sejoursByMembre.get(m.id) || [],
       }));
 
-    // Also add non-permanent members who have sejours this month
-    // (only if they're in the visible membres list — hidden members are excluded)
-    const visibleIds = new Set(membres.map((m) => m.id));
-    for (const [membreId, mSejours] of sejoursByMembre.entries()) {
-      if (!memberRows.find((r) => r.id === membreId) && visibleIds.has(membreId)) {
-        const s = mSejours[0];
-        memberRows.push({
-          id: membreId,
-          prenom: s.prenom,
-          famille_nom: s.famille_nom,
-          branche: s.branche,
-          couleur: s.couleur,
-          sejours: mSejours,
-        });
-      }
-    }
-
-    // Sort by branche, then famille, then prenom
+    // Sort permanent rows by branche, then famille, then prenom
     memberRows.sort((a, b) => {
       if (a.branche !== b.branche) return a.branche.localeCompare(b.branche);
       if (a.famille_nom !== b.famille_nom) return a.famille_nom.localeCompare(b.famille_nom);
       return a.prenom.localeCompare(b.prenom);
     });
 
-    return memberRows;
+    // Non-permanent members with sejours: put them in a virtual "+1" branche at the bottom
+    const visibleIds = new Set(membres.map((m) => m.id));
+    const tempRows: MembreRow[] = [];
+    for (const [membreId, mSejours] of sejoursByMembre.entries()) {
+      if (!memberRows.find((r) => r.id === membreId) && visibleIds.has(membreId)) {
+        const m = membres.find((x) => x.id === membreId);
+        const s = mSejours[0];
+        tempRows.push({
+          id: membreId,
+          prenom: s.prenom,
+          famille_nom: m ? m.famille_nom : s.famille_nom,
+          branche: '+1',
+          couleur: '#6b7280',
+          sejours: mSejours,
+        });
+      }
+    }
+    tempRows.sort((a, b) => {
+      if (a.famille_nom !== b.famille_nom) return a.famille_nom.localeCompare(b.famille_nom);
+      return a.prenom.localeCompare(b.prenom);
+    });
+
+    return [...memberRows, ...tempRows];
   }, [membres, sejours, onlyWithSejours]);
 
   // Group rows by branche for section headers
@@ -114,15 +119,15 @@ export default function MonthView({ currentDate, sejours, membres, onlyWithSejou
       current.rows.push(row);
     }
     for (const group of groups) {
-      group.occupancy = days.map(
-        (day) =>
-          sejours.filter(
-            (s) => s.branche === group.branche && isNightOccupied(day, s.arrivee, s.depart)
-          ).length
+      group.occupancy = days.map((day) =>
+        group.rows.reduce(
+          (n, r) => n + (r.sejours.some((s) => isNightOccupied(day, s.arrivee, s.depart)) ? 1 : 0),
+          0
+        )
       );
     }
     return groups;
-  }, [rows, days, sejours]);
+  }, [rows, days]);
 
   const handleDayMouseDown = useCallback((dayIndex: number, membreId?: string) => {
     setIsSelecting(true);
