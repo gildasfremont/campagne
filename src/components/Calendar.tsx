@@ -26,7 +26,6 @@ import MonthView from './MonthView';
 import WeekView from './WeekView';
 import DayView from './DayView';
 import SejourPanel from './SejourPanel';
-import MembresPanel from './MembresPanel';
 import Toast from './Toast';
 
 type ViewMode = 'month' | 'week' | 'day';
@@ -44,7 +43,6 @@ export default function Calendar() {
   const [editingSejour, setEditingSejour] = useState<SejourWithDetails | null>(null);
 
   // Membres panel
-  const [showMembresPanel, setShowMembresPanel] = useState(false);
 
   // Undo toast
   const [deletedSejour, setDeletedSejour] = useState<SejourWithDetails | null>(null);
@@ -298,7 +296,7 @@ export default function Calendar() {
       {/* Membres */}
       <div className="mt-6 border-t border-gray-200 pt-4">
         <button
-          onClick={() => setShowMembresPanel(true)}
+          onClick={() => router.push('/membres')}
           className="text-sm text-blue-600 hover:text-blue-800 font-medium"
         >
           Gérer les membres
@@ -321,16 +319,6 @@ export default function Calendar() {
           onClose={handlePanelClose}
           onUpdated={handleUpdated}
           onDeleted={handleDeleted}
-        />
-      )}
-
-      {/* Membres management panel */}
-      {showMembresPanel && (
-        <MembresPanel
-          familles={familles}
-          membres={membres}
-          onClose={() => setShowMembresPanel(false)}
-          onRefresh={refreshMembres}
         />
       )}
 
