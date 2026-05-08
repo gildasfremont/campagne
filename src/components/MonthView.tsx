@@ -114,15 +114,15 @@ export default function MonthView({ currentDate, sejours, membres, onlyWithSejou
       current.rows.push(row);
     }
     for (const group of groups) {
-      group.occupancy = days.map((day) =>
-        group.rows.reduce(
-          (n, r) => n + (r.sejours.some((s) => isNightOccupied(day, s.arrivee, s.depart)) ? 1 : 0),
-          0
-        )
+      group.occupancy = days.map(
+        (day) =>
+          sejours.filter(
+            (s) => s.branche === group.branche && isNightOccupied(day, s.arrivee, s.depart)
+          ).length
       );
     }
     return groups;
-  }, [rows, days]);
+  }, [rows, days, sejours]);
 
   const handleDayMouseDown = useCallback((dayIndex: number, membreId?: string) => {
     setIsSelecting(true);
