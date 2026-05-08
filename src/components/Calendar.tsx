@@ -325,7 +325,7 @@ export default function Calendar() {
               viewMode === 'week' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            Semaine
+            Sem.
           </button>
           <button
             onClick={() => setViewMode('day')}
