@@ -273,15 +273,12 @@ export default function Calendar() {
 
       {/* Membres */}
       <div className="mt-6 border-t border-gray-200 pt-4">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Membres</span>
-          <button
-            onClick={() => setShowMembresPanel(true)}
-            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-          >
-            Gérer les membres
-          </button>
-        </div>
+        <button
+          onClick={() => setShowMembresPanel(true)}
+          className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+        >
+          Gérer les membres
+        </button>
       </div>
 
       {/* Occupancy legend */}
