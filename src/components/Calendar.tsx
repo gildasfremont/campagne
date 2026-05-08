@@ -188,70 +188,35 @@ export default function Calendar() {
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="space-y-2 mb-3">
-        {/* Nav row */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={goPrev}
-            className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 shrink-0"
-            aria-label="Précédent"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <h2 className="flex-1 text-center text-base sm:text-lg font-semibold text-gray-900 capitalize truncate">
-            {currentTitle}
-          </h2>
-          <button
-            onClick={goNext}
-            className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 shrink-0"
-            aria-label="Suivant"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-          <button
-            onClick={goToday}
-            className="ml-1 px-2.5 py-1.5 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg font-medium shrink-0"
-          >
-            Aujourd&apos;hui
-          </button>
-        </div>
-
-        {/* Filter row */}
-        <div className="flex items-center justify-between gap-2">
-          <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer min-w-0">
-            <input
-              type="checkbox"
-              checked={onlyWithSejours}
-              onChange={(e) => setOnlyWithSejours(e.target.checked)}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 shrink-0"
-            />
-            <span className="truncate">Séjours uniquement</span>
-          </label>
-
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5 shrink-0">
-            <button
-              onClick={() => setViewMode('month')}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'month' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Mois
-            </button>
-            <button
-              onClick={() => setViewMode('week')}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'week' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Semaine
-            </button>
-          </div>
-        </div>
+      {/* Nav */}
+      <div className="flex items-center gap-1 mb-3">
+        <button
+          onClick={goPrev}
+          className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 shrink-0"
+          aria-label="Précédent"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h2 className="flex-1 text-center text-base sm:text-lg font-semibold text-gray-900 capitalize truncate">
+          {currentTitle}
+        </h2>
+        <button
+          onClick={goNext}
+          className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 shrink-0"
+          aria-label="Suivant"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+        <button
+          onClick={goToday}
+          className="ml-1 px-2.5 py-1.5 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg font-medium shrink-0"
+        >
+          Aujourd&apos;hui
+        </button>
       </div>
 
       {/* Calendar view */}
@@ -286,6 +251,44 @@ export default function Calendar() {
           +
         </button>
       )}
+
+      {/* Paramètres */}
+      <div className="mt-6 border-t border-gray-200 pt-4 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Vue</span>
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+            <button
+              onClick={() => setViewMode('month')}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'month' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Mois
+            </button>
+            <button
+              onClick={() => setViewMode('week')}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'week' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Semaine
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Filtre</span>
+          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={onlyWithSejours}
+              onChange={(e) => setOnlyWithSejours(e.target.checked)}
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            Afficher uniquement les membres avec séjours
+          </label>
+        </div>
+      </div>
 
       {/* Occupancy legend */}
       <div className="flex flex-col gap-1 mt-6 text-xs text-gray-500">
