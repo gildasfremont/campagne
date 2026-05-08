@@ -206,6 +206,38 @@ export default function Calendar() {
         </button>
       </div>
 
+      {/* Filters */}
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer min-w-0">
+          <input
+            type="checkbox"
+            checked={onlyWithSejours}
+            onChange={(e) => setOnlyWithSejours(e.target.checked)}
+            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 shrink-0"
+          />
+          <span className="truncate">Séjours uniquement</span>
+        </label>
+
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5 shrink-0">
+          <button
+            onClick={() => setViewMode('month')}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              viewMode === 'month' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Mois
+          </button>
+          <button
+            onClick={() => setViewMode('week')}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              viewMode === 'week' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Semaine
+          </button>
+        </div>
+      </div>
+
       {/* Calendar view */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         {loading ? (
@@ -239,43 +271,8 @@ export default function Calendar() {
         </button>
       )}
 
-      {/* Paramètres */}
-      <div className="mt-6 border-t border-gray-200 pt-4 space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Vue</span>
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
-            <button
-              onClick={() => setViewMode('month')}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'month' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Mois
-            </button>
-            <button
-              onClick={() => setViewMode('week')}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'week' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Semaine
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Filtre</span>
-          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={onlyWithSejours}
-              onChange={(e) => setOnlyWithSejours(e.target.checked)}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            Afficher uniquement les membres avec séjours
-          </label>
-        </div>
-
+      {/* Membres */}
+      <div className="mt-6 border-t border-gray-200 pt-4">
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Membres</span>
           <button
