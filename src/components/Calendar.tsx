@@ -194,17 +194,17 @@ export default function Calendar() {
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Campagne</h1>
-          <p className="text-sm text-gray-500">Calendrier de la maison</p>
+      <div className="flex items-center justify-between gap-2 mb-4">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Campagne</h1>
+          <p className="hidden sm:block text-sm text-gray-500">Calendrier de la maison</p>
         </div>
 
         {/* Identity selector + members management */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={() => setShowMembresPanel(true)}
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700"
+            className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700"
             aria-label="Gérer les membres"
             title="Gérer les membres"
           >
@@ -212,13 +212,13 @@ export default function Calendar() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
             </svg>
           </button>
-          <label className="text-xs text-gray-500">Qui êtes-vous ?</label>
           <select
             value={currentMembreId || ''}
             onChange={(e) => saveIdentity(e.target.value)}
-            className="border border-gray-300 rounded-lg px-2 py-1 text-sm text-gray-700 max-w-[180px]"
+            aria-label="Qui êtes-vous"
+            className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-gray-700 max-w-[140px] sm:max-w-[180px]"
           >
-            <option value="">Choisir...</option>
+            <option value="">Qui êtes-vous ?</option>
             {visibleMembres
               .filter((m) => m.est_permanent)
               .map((m) => (
@@ -231,46 +231,51 @@ export default function Calendar() {
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-        <div className="flex items-center gap-1.5">
+      <div className="space-y-2 mb-3">
+        {/* Nav row */}
+        <div className="flex items-center gap-1">
           <button
             onClick={goPrev}
-            className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+            className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 shrink-0"
             aria-label="Précédent"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <h2 className="text-lg font-semibold text-gray-900 capitalize min-w-[180px] text-center">
+          <h2 className="flex-1 text-center text-base sm:text-lg font-semibold text-gray-900 capitalize truncate">
             {currentTitle}
           </h2>
           <button
             onClick={goNext}
-            className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+            className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 shrink-0"
             aria-label="Suivant"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
-          <button onClick={goToday} className="text-sm text-blue-600 hover:text-blue-800 font-medium ml-2">
+          <button
+            onClick={goToday}
+            className="ml-1 px-2.5 py-1.5 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg font-medium shrink-0"
+          >
             Aujourd&apos;hui
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+        {/* Filter row */}
+        <div className="flex items-center justify-between gap-2">
+          <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer min-w-0">
             <input
               type="checkbox"
               checked={onlyWithSejours}
               onChange={(e) => setOnlyWithSejours(e.target.checked)}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 shrink-0"
             />
-            Séjours uniquement
+            <span className="truncate">Séjours uniquement</span>
           </label>
 
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5 shrink-0">
             <button
               onClick={() => setViewMode('month')}
               className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
