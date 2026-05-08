@@ -393,13 +393,19 @@ export default function Calendar() {
         +
       </button>
 
-      {/* Membres */}
-      <div className="mt-6 border-t border-gray-200 pt-4">
+      {/* Liens admin */}
+      <div className="mt-6 border-t border-gray-200 pt-4 flex flex-col gap-2">
         <button
           onClick={() => router.push('/membres')}
-          className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+          className="text-sm text-blue-600 hover:text-blue-800 font-medium text-left"
         >
           Gérer les membres
+        </button>
+        <button
+          onClick={() => router.push('/admin')}
+          className="text-sm text-blue-600 hover:text-blue-800 font-medium text-left"
+        >
+          Affecter les chambres
         </button>
       </div>
 

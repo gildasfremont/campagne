@@ -1,9 +1,11 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Famille, MembreWithFamille, Sejour, SejourWithDetails } from './types';
+import { Affectation, Chambre, Famille, MembreWithFamille, Sejour, SejourWithDetails } from './types';
 import { SEED_FAMILLES, SEED_MEMBRES } from './seed-data';
 
 const MEMBRES_KEY = 'campagne_membres_v1';
 const SEJOURS_KEY = 'campagne_sejours_v1';
+const CHAMBRES_KEY = 'campagne_chambres_v1';
+const AFFECTATIONS_KEY = 'campagne_affectations_v1';
 
 function readJSON<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback;
@@ -158,4 +160,83 @@ export function deleteSejour(id: string): boolean {
 
 export function restoreSejour(sejour: Sejour): void {
   saveRawSejours([...getRawSejours(), sejour]);
+}
+
+// ----- Chambres -----
+
+export function getChambres(): Chambre[] {
+  return readJSON<Chambre[]>(CHAMBRES_KEY, []);
+}
+
+function saveChambres(chambres: Chambre[]): void {
+  writeJSON(CHAMBRES_KEY, chambres);
+}
+
+export function addChambre(input: { nom: string; couchages: number; maison: 'grande' | 'petite' }): Chambre {
+  const chambre: Chambre = {
+    id: uuidv4(),
+    nom: input.nom,
+    couchages: input.couchages,
+    maison: input.maison,
+  };
+  saveChambres([...getChambres(), chambre]);
+  return chambre;
+}
+
+export function updateChambre(
+  id: string,
+  patch: { nom?: string; couchages?: number; maison?: 'grande' | 'petite' }
+): Chambre | null {
+  const all = getChambres();
+  const idx = all.findIndex((c) => c.id === id);
+  if (idx === -1) return null;
+  const updated: Chambre = { ...all[idx], ...patch };
+  const next = [...all];
+  next[idx] = updated;
+  saveChambres(next);
+  return updated;
+}
+
+export function deleteChambre(id: string): boolean {
+  const all = getChambres();
+  const next = all.filter((c) => c.id !== id);
+  if (next.length === all.length) return false;
+  saveChambres(next);
+  // Also drop any affectation pointing at this chambre
+  const aff = getAffectations().filter((a) => a.chambre_id !== id);
+  saveAffectations(aff);
+  return true;
+}
+
+// ----- Affectations -----
+
+export function getAffectations(): Affectation[] {
+  return readJSON<Affectation[]>(AFFECTATIONS_KEY, []);
+}
+
+function saveAffectations(aff: Affectation[]): void {
+  writeJSON(AFFECTATIONS_KEY, aff);
+}
+
+export function assignSejour(input: { sejour_id: string; chambre_id: string; nuits: string[] }): void {
+  const all = getAffectations();
+  // Remove any existing affectation for this sejour on the same nuits
+  const filtered = all.filter(
+    (a) => !(a.sejour_id === input.sejour_id && input.nuits.includes(a.nuit))
+  );
+  const created: Affectation[] = input.nuits.map((nuit) => ({
+    id: uuidv4(),
+    chambre_id: input.chambre_id,
+    sejour_id: input.sejour_id,
+    nuit,
+  }));
+  saveAffectations([...filtered, ...created]);
+}
+
+export function unassignSejour(sejour_id: string, nuits: string[]): void {
+  const all = getAffectations();
+  const next = all.filter(
+    (a) => !(a.sejour_id === sejour_id && nuits.includes(a.nuit))
+  );
+  saveAffectations(next);
 }
