@@ -36,6 +36,16 @@ export default function MonthView({ currentDate, sejours, membres, onSelectDates
   const [selectionEnd, setSelectionEnd] = useState<number | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionMembreId, setSelectionMembreId] = useState<string | null>(null);
+  const [collapsedBranches, setCollapsedBranches] = useState<Set<string>>(new Set());
+
+  const toggleBranche = (branche: string) => {
+    setCollapsedBranches((prev) => {
+      const next = new Set(prev);
+      if (next.has(branche)) next.delete(branche);
+      else next.add(branche);
+      return next;
+    });
+  };
 
   // Calculate nightly occupancy for each day
   const occupancy = useMemo(() => {
@@ -193,18 +203,26 @@ export default function MonthView({ currentDate, sejours, membres, onSelectDates
         </div>
 
         {/* Members grouped by branche */}
-        {brancheGroups.map((group) => (
+        {brancheGroups.map((group) => {
+          const isCollapsed = collapsedBranches.has(group.branche);
+          return (
           <div key={group.branche}>
             {/* Branche header */}
-            <div className="flex border-b border-gray-200 bg-gray-50">
-              <div className="w-32 shrink-0 px-2 py-1 flex items-center">
-                <span className="text-xs font-semibold text-gray-600">{group.branche}</span>
+            <button
+              type="button"
+              onClick={() => toggleBranche(group.branche)}
+              className="w-full flex border-b border-gray-200 bg-gray-50 hover:bg-gray-100 text-left"
+            >
+              <div className="w-32 shrink-0 px-2 py-1 flex items-center gap-1">
+                <span className="text-gray-500 text-[10px] w-3">{isCollapsed ? '▶' : '▼'}</span>
+                <span className="text-xs font-semibold text-gray-600 truncate">{group.branche}</span>
+                <span className="text-[10px] text-gray-400 ml-1">({group.rows.length})</span>
               </div>
               <div className="flex-1" />
-            </div>
+            </button>
 
             {/* Member rows */}
-            {group.rows.map((member) => (
+            {!isCollapsed && group.rows.map((member) => (
               <div key={member.id} className="flex border-b border-gray-100 hover:bg-gray-50/50">
                 <div
                   className="w-32 shrink-0 px-2 py-1.5 text-xs truncate flex items-center gap-1"
@@ -267,7 +285,8 @@ export default function MonthView({ currentDate, sejours, membres, onSelectDates
               </div>
             ))}
           </div>
-        ))}
+          );
+        })}
 
         {/* Empty state */}
         {membres.length === 0 && (
