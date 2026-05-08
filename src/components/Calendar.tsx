@@ -299,17 +299,10 @@ export default function Calendar() {
       {/* Sejour edit modal */}
       {editingSejour && (
         <SejourPanel
-          familles={familles}
-          membres={visibleMembres}
-          selectedDates={null}
-          editingSejour={editingSejour}
-          currentMembreId={null}
-          preselectedFamilleId={null}
+          sejour={editingSejour}
           onClose={handlePanelClose}
-          onCreated={handlePanelClose}
           onUpdated={handleUpdated}
           onDeleted={handleDeleted}
-          onRefreshMembres={refreshMembres}
         />
       )}
 
