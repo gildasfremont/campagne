@@ -75,6 +75,8 @@ export default function EditSejourForm() {
     );
   }
 
+  const nights = arrivee && depart ? differenceInDays(parseISO(depart), parseISO(arrivee)) : 0;
+
   return (
     <div className="max-w-xl mx-auto px-4 py-6">
       {/* Header */}
@@ -88,21 +90,29 @@ export default function EditSejourForm() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-xl font-semibold text-gray-900">
-          Séjour de {sejour.prenom}
-        </h1>
+        <h1 className="text-xl font-semibold text-gray-900">Modifier un séjour</h1>
       </div>
 
-      {/* Famille (read-only) */}
-      <div className="mb-4">
-        <span className="block text-sm font-medium text-gray-700 mb-1">Famille</span>
-        <div className="flex items-center gap-2 text-sm text-gray-700">
+      {/* Identification du séjour */}
+      <div className="mb-5 p-4 rounded-xl border border-gray-200 bg-gray-50">
+        <div className="flex items-center gap-2 mb-1">
           <span
             className="w-2.5 h-2.5 rounded-full shrink-0"
             style={{ backgroundColor: sejour.couleur }}
           />
-          <span>{sejour.famille_nom}</span>
-          <span className="text-xs text-gray-400">({sejour.branche})</span>
+          <span className="text-base font-semibold text-gray-900">{sejour.prenom}</span>
+          <span className="text-sm text-gray-500 truncate">{sejour.famille_nom}</span>
+        </div>
+        <div className="text-sm text-gray-700">
+          {arrivee && depart ? (
+            <>
+              du <strong>{format(parseISO(arrivee), 'EEEE d MMMM', { locale: fr })}</strong>
+              {' '}au <strong>{format(parseISO(depart), 'EEEE d MMMM yyyy', { locale: fr })}</strong>
+              <span className="text-gray-400"> · {nights} nuit{nights > 1 ? 's' : ''}</span>
+            </>
+          ) : (
+            <span className="text-gray-400">dates à définir</span>
+          )}
         </div>
       </div>
 
