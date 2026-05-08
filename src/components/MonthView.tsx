@@ -104,17 +104,25 @@ export default function MonthView({ currentDate, sejours, membres, onlyWithSejou
 
   // Group rows by branche for section headers
   const brancheGroups = useMemo(() => {
-    const groups: { branche: string; couleur: string; rows: MembreRow[] }[] = [];
+    const groups: { branche: string; couleur: string; rows: MembreRow[]; occupancy: number[] }[] = [];
     let current: (typeof groups)[0] | null = null;
     for (const row of rows) {
       if (!current || current.branche !== row.branche) {
-        current = { branche: row.branche, couleur: row.couleur, rows: [] };
+        current = { branche: row.branche, couleur: row.couleur, rows: [], occupancy: [] };
         groups.push(current);
       }
       current.rows.push(row);
     }
+    for (const group of groups) {
+      group.occupancy = days.map((day) =>
+        group.rows.reduce(
+          (n, r) => n + (r.sejours.some((s) => isNightOccupied(day, s.arrivee, s.depart)) ? 1 : 0),
+          0
+        )
+      );
+    }
     return groups;
-  }, [rows]);
+  }, [rows, days]);
 
   const handleDayMouseDown = useCallback((dayIndex: number, membreId?: string) => {
     setIsSelecting(true);
@@ -220,7 +228,23 @@ export default function MonthView({ currentDate, sejours, membres, onlyWithSejou
                 <span className="text-xs font-semibold text-gray-600 truncate">{group.branche}</span>
                 <span className="text-[10px] text-gray-400 ml-1">({group.rows.length})</span>
               </div>
-              <div className="flex-1" />
+              <div className="flex flex-1">
+                {days.map((day, i) => (
+                  <div
+                    key={`bocc-${group.branche}-${formatDateParam(day)}`}
+                    className="flex-1 min-w-[38px] flex items-center justify-center py-0.5 border-r border-gray-100 last:border-r-0"
+                  >
+                    {group.occupancy[i] > 0 && (
+                      <span
+                        className="text-[10px] font-semibold rounded px-1 leading-tight text-white"
+                        style={{ backgroundColor: group.couleur }}
+                      >
+                        {group.occupancy[i]}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </button>
 
             {/* Member rows */}
