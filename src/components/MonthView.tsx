@@ -17,6 +17,7 @@ interface MonthViewProps {
   currentDate: Date;
   sejours: SejourWithDetails[];
   membres: MembreWithFamille[];
+  onlyWithSejours?: boolean;
   onSelectDates: (start: Date, end: Date, membreId?: string) => void;
   onEditSejour: (sejour: SejourWithDetails) => void;
 }
@@ -30,12 +31,22 @@ interface MembreRow {
   sejours: SejourWithDetails[];
 }
 
-export default function MonthView({ currentDate, sejours, membres, onSelectDates, onEditSejour }: MonthViewProps) {
+export default function MonthView({ currentDate, sejours, membres, onlyWithSejours, onSelectDates, onEditSejour }: MonthViewProps) {
   const days = useMemo(() => getMonthDays(currentDate), [currentDate]);
   const [selectionStart, setSelectionStart] = useState<number | null>(null);
   const [selectionEnd, setSelectionEnd] = useState<number | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionMembreId, setSelectionMembreId] = useState<string | null>(null);
+  const [expandedBranches, setExpandedBranches] = useState<Set<string>>(new Set());
+
+  const toggleBranche = (branche: string) => {
+    setExpandedBranches((prev) => {
+      const next = new Set(prev);
+      if (next.has(branche)) next.delete(branche);
+      else next.add(branche);
+      return next;
+    });
+  };
 
   // Calculate nightly occupancy for each day
   const occupancy = useMemo(() => {
@@ -54,6 +65,7 @@ export default function MonthView({ currentDate, sejours, membres, onSelectDates
 
     const memberRows: MembreRow[] = membres
       .filter((m) => m.est_permanent)
+      .filter((m) => !onlyWithSejours || (sejoursByMembre.get(m.id)?.length ?? 0) > 0)
       .map((m) => ({
         id: m.id,
         prenom: m.prenom,
@@ -63,46 +75,59 @@ export default function MonthView({ currentDate, sejours, membres, onSelectDates
         sejours: sejoursByMembre.get(m.id) || [],
       }));
 
-    // Also add non-permanent members who have sejours this month
-    // (only if they're in the visible membres list — hidden members are excluded)
-    const visibleIds = new Set(membres.map((m) => m.id));
-    for (const [membreId, mSejours] of sejoursByMembre.entries()) {
-      if (!memberRows.find((r) => r.id === membreId) && visibleIds.has(membreId)) {
-        const s = mSejours[0];
-        memberRows.push({
-          id: membreId,
-          prenom: s.prenom,
-          famille_nom: s.famille_nom,
-          branche: s.branche,
-          couleur: s.couleur,
-          sejours: mSejours,
-        });
-      }
-    }
-
-    // Sort by branche, then famille, then prenom
+    // Sort permanent rows by branche, then famille, then prenom
     memberRows.sort((a, b) => {
       if (a.branche !== b.branche) return a.branche.localeCompare(b.branche);
       if (a.famille_nom !== b.famille_nom) return a.famille_nom.localeCompare(b.famille_nom);
       return a.prenom.localeCompare(b.prenom);
     });
 
-    return memberRows;
-  }, [membres, sejours]);
+    // Non-permanent members with sejours: put them in a virtual "+1" branche at the bottom
+    const visibleIds = new Set(membres.map((m) => m.id));
+    const tempRows: MembreRow[] = [];
+    for (const [membreId, mSejours] of sejoursByMembre.entries()) {
+      if (!memberRows.find((r) => r.id === membreId) && visibleIds.has(membreId)) {
+        const m = membres.find((x) => x.id === membreId);
+        const s = mSejours[0];
+        tempRows.push({
+          id: membreId,
+          prenom: s.prenom,
+          famille_nom: m ? m.famille_nom : s.famille_nom,
+          branche: '+1',
+          couleur: '#6b7280',
+          sejours: mSejours,
+        });
+      }
+    }
+    tempRows.sort((a, b) => {
+      if (a.famille_nom !== b.famille_nom) return a.famille_nom.localeCompare(b.famille_nom);
+      return a.prenom.localeCompare(b.prenom);
+    });
+
+    return [...memberRows, ...tempRows];
+  }, [membres, sejours, onlyWithSejours]);
 
   // Group rows by branche for section headers
   const brancheGroups = useMemo(() => {
-    const groups: { branche: string; couleur: string; rows: MembreRow[] }[] = [];
+    const groups: { branche: string; couleur: string; rows: MembreRow[]; occupancy: number[] }[] = [];
     let current: (typeof groups)[0] | null = null;
     for (const row of rows) {
       if (!current || current.branche !== row.branche) {
-        current = { branche: row.branche, couleur: row.couleur, rows: [] };
+        current = { branche: row.branche, couleur: row.couleur, rows: [], occupancy: [] };
         groups.push(current);
       }
       current.rows.push(row);
     }
+    for (const group of groups) {
+      group.occupancy = days.map((day) =>
+        group.rows.reduce(
+          (n, r) => n + (r.sejours.some((s) => isNightOccupied(day, s.arrivee, s.depart)) ? 1 : 0),
+          0
+        )
+      );
+    }
     return groups;
-  }, [rows]);
+  }, [rows, days]);
 
   const handleDayMouseDown = useCallback((dayIndex: number, membreId?: string) => {
     setIsSelecting(true);
@@ -193,18 +218,42 @@ export default function MonthView({ currentDate, sejours, membres, onSelectDates
         </div>
 
         {/* Members grouped by branche */}
-        {brancheGroups.map((group) => (
+        {brancheGroups.map((group) => {
+          const isExpanded = expandedBranches.has(group.branche);
+          return (
           <div key={group.branche}>
             {/* Branche header */}
-            <div className="flex border-b border-gray-200 bg-gray-50">
-              <div className="w-32 shrink-0 px-2 py-1 flex items-center">
-                <span className="text-xs font-semibold text-gray-600">{group.branche}</span>
+            <button
+              type="button"
+              onClick={() => toggleBranche(group.branche)}
+              className="w-full flex border-b border-gray-200 bg-gray-50 hover:bg-gray-100 text-left"
+            >
+              <div className="w-32 shrink-0 px-2 py-1 flex items-center gap-1">
+                <span className="text-gray-500 text-[10px] w-3">{isExpanded ? '▼' : '▶'}</span>
+                <span className="text-xs font-semibold text-gray-600 truncate">{group.branche}</span>
+                <span className="text-[10px] text-gray-400 ml-1">({group.rows.length})</span>
               </div>
-              <div className="flex-1" />
-            </div>
+              <div className="flex flex-1">
+                {days.map((day, i) => (
+                  <div
+                    key={`bocc-${group.branche}-${formatDateParam(day)}`}
+                    className="flex-1 min-w-[38px] flex items-center justify-center py-0.5 border-r border-gray-100 last:border-r-0"
+                  >
+                    {group.occupancy[i] > 0 && (
+                      <span
+                        className="text-[10px] font-semibold rounded px-1 leading-tight text-white"
+                        style={{ backgroundColor: group.couleur }}
+                      >
+                        {group.occupancy[i]}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </button>
 
             {/* Member rows */}
-            {group.rows.map((member) => (
+            {isExpanded && group.rows.map((member) => (
               <div key={member.id} className="flex border-b border-gray-100 hover:bg-gray-50/50">
                 <div
                   className="w-32 shrink-0 px-2 py-1.5 text-xs truncate flex items-center gap-1"
@@ -267,7 +316,8 @@ export default function MonthView({ currentDate, sejours, membres, onSelectDates
               </div>
             ))}
           </div>
-        ))}
+          );
+        })}
 
         {/* Empty state */}
         {membres.length === 0 && (

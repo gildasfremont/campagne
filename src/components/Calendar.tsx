@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Famille, MembreWithFamille, SejourWithDetails } from '@/lib/types';
 import {
   format,
@@ -14,15 +15,23 @@ import {
   getDefaultMonth,
   fr,
 } from '@/lib/dates';
+import {
+  getFamilles,
+  getMembres,
+  getSejours,
+  deleteSejour as deleteSejourLocal,
+  restoreSejour,
+} from '@/lib/local-store';
 import MonthView from './MonthView';
 import WeekView from './WeekView';
+import DayView from './DayView';
 import SejourPanel from './SejourPanel';
-import MembresPanel from './MembresPanel';
 import Toast from './Toast';
 
-type ViewMode = 'month' | 'week';
+type ViewMode = 'month' | 'week' | 'day';
 
 export default function Calendar() {
+  const router = useRouter();
   const [currentDate, setCurrentDate] = useState(getDefaultMonth);
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [familles, setFamilles] = useState<Famille[]>([]);
@@ -30,137 +39,130 @@ export default function Calendar() {
   const [sejours, setSejours] = useState<SejourWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Panel state
-  const [showPanel, setShowPanel] = useState(false);
-  const [selectedDates, setSelectedDates] = useState<{ start: Date; end: Date } | null>(null);
+  // Edit modal state
   const [editingSejour, setEditingSejour] = useState<SejourWithDetails | null>(null);
 
-  // localStorage identity
-  const [currentMembreId, setCurrentMembreId] = useState<string | null>(null);
-
   // Membres panel
-  const [showMembresPanel, setShowMembresPanel] = useState(false);
 
   // Undo toast
   const [deletedSejour, setDeletedSejour] = useState<SejourWithDetails | null>(null);
 
+  // Filter to show only members with sejours
+  const [onlyWithSejours, setOnlyWithSejours] = useState(false);
+
   // Filter hidden members for calendar display
   const visibleMembres = membres.filter((m) => !m.est_cache);
 
-  // Load identity from localStorage
+  // Load static data from local store
   useEffect(() => {
-    const stored = localStorage.getItem('campagne_membre_id');
-    if (stored) setCurrentMembreId(stored);
+    setFamilles(getFamilles());
+    setMembres(getMembres());
   }, []);
 
-  const saveIdentity = (membreId: string) => {
-    setCurrentMembreId(membreId);
-    localStorage.setItem('campagne_membre_id', membreId);
-  };
-
-  // Fetch static data
-  useEffect(() => {
-    Promise.all([
-      fetch('/api/familles').then((r) => r.json()),
-      fetch('/api/membres').then((r) => r.json()),
-    ]).then(([fam, mem]) => {
-      setFamilles(fam);
-      setMembres(mem);
-    }).catch((err) => {
-      console.error('Error fetching familles/membres:', err);
-    });
-  }, []);
-
-  // Fetch sejours when date changes
-  const fetchSejours = useCallback(async () => {
+  // Load sejours when date changes
+  const fetchSejours = useCallback(() => {
     setLoading(true);
-    try {
-      let from: string, to: string;
-      if (viewMode === 'month') {
-        from = formatDateParam(startOfMonth(currentDate));
-        to = formatDateParam(endOfMonth(currentDate));
-      } else {
-        from = formatDateParam(startOfWeek(currentDate, { weekStartsOn: 1 }));
-        to = formatDateParam(endOfWeek(currentDate, { weekStartsOn: 1 }));
-      }
-      const res = await fetch(`/api/sejours?from=${from}&to=${to}`);
-      const data = await res.json();
-      setSejours(data);
-    } catch (err) {
-      console.error('Error fetching sejours:', err);
-    } finally {
-      setLoading(false);
+    let from: string, to: string;
+    if (viewMode === 'month') {
+      from = formatDateParam(startOfMonth(currentDate));
+      to = formatDateParam(endOfMonth(currentDate));
+    } else if (viewMode === 'week') {
+      from = formatDateParam(startOfWeek(currentDate, { weekStartsOn: 1 }));
+      to = formatDateParam(endOfWeek(currentDate, { weekStartsOn: 1 }));
+    } else {
+      from = formatDateParam(currentDate);
+      to = formatDateParam(currentDate);
     }
+    setSejours(getSejours(from, to));
+    setLoading(false);
   }, [currentDate, viewMode]);
 
   useEffect(() => {
     fetchSejours();
   }, [fetchSejours]);
 
-  // Refresh membres too (for newly added temp members)
-  const refreshAll = useCallback(async () => {
-    const mem = await fetch('/api/membres').then((r) => r.json());
-    setMembres(mem);
-    await fetchSejours();
-  }, [fetchSejours]);
-
-  // Refresh only members (without closing panel)
-  const refreshMembres = useCallback(async () => {
-    const mem = await fetch('/api/membres').then((r) => r.json());
-    setMembres(mem);
+  const refreshMembres = useCallback(() => {
+    setMembres(getMembres());
   }, []);
 
   // Navigation
   const goNext = () => {
-    setCurrentDate((d) => addMonths(d, viewMode === 'month' ? 1 : 0));
-    if (viewMode === 'week') {
+    if (viewMode === 'month') {
+      setCurrentDate((d) => addMonths(d, 1));
+    } else if (viewMode === 'week') {
       setCurrentDate((d) => new Date(d.getTime() + 7 * 24 * 60 * 60 * 1000));
+    } else {
+      setCurrentDate((d) => new Date(d.getTime() + 24 * 60 * 60 * 1000));
     }
   };
 
   const goPrev = () => {
-    setCurrentDate((d) => subMonths(d, viewMode === 'month' ? 1 : 0));
-    if (viewMode === 'week') {
+    if (viewMode === 'month') {
+      setCurrentDate((d) => subMonths(d, 1));
+    } else if (viewMode === 'week') {
       setCurrentDate((d) => new Date(d.getTime() - 7 * 24 * 60 * 60 * 1000));
+    } else {
+      setCurrentDate((d) => new Date(d.getTime() - 24 * 60 * 60 * 1000));
     }
   };
 
   const goToday = () => setCurrentDate(new Date());
 
-  // Pre-selected family (when user drags on a member row)
-  const [preselectedFamilleId, setPreselectedFamilleId] = useState<string | null>(null);
+  // Month picker dropdown
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerYear, setPickerYear] = useState(currentDate.getFullYear());
+  const pickerRef = useRef<HTMLDivElement>(null);
 
-  // Date selection for creating sejours
+  useEffect(() => {
+    setPickerYear(currentDate.getFullYear());
+  }, [currentDate]);
+
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setPickerOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [pickerOpen]);
+
+  const pickMonth = (year: number, month: number) => {
+    setCurrentDate(new Date(year, month, 1));
+    setPickerOpen(false);
+  };
+
+  const monthLabels = [
+    'janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin',
+    'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.',
+  ];
+
+  const todayMonth = new Date().getMonth();
+  const todayYear = new Date().getFullYear();
+  const currentMonth = currentDate.getMonth();
+  const currentYear = currentDate.getFullYear();
+
+  // Date selection on calendar → navigate to /sejour/nouveau
   const handleSelectDates = (start: Date, end: Date, membreId?: string) => {
-    setSelectedDates({ start, end });
-    setEditingSejour(null);
+    const params = new URLSearchParams({
+      from: formatDateParam(start),
+      to: formatDateParam(end),
+    });
     if (membreId) {
       const membre = membres.find((m) => m.id === membreId);
-      setPreselectedFamilleId(membre?.famille_id ?? null);
-    } else {
-      setPreselectedFamilleId(null);
+      if (membre) params.set('famille', membre.famille_id);
     }
-    setShowPanel(true);
+    router.push(`/sejour/nouveau?${params.toString()}`);
   };
 
-  // Edit sejour
+  // Edit sejour (modal)
   const handleEditSejour = (sejour: SejourWithDetails) => {
     setEditingSejour(sejour);
-    setSelectedDates(null);
-    setShowPanel(true);
   };
 
-  // Panel callbacks
   const handlePanelClose = () => {
-    setShowPanel(false);
     setEditingSejour(null);
-    setSelectedDates(null);
-    setPreselectedFamilleId(null);
-  };
-
-  const handleCreated = () => {
-    handlePanelClose();
-    refreshAll();
   };
 
   const handleUpdated = () => {
@@ -168,27 +170,27 @@ export default function Calendar() {
     fetchSejours();
   };
 
-  const handleDeleted = async (sejour: SejourWithDetails) => {
+  const handleDeleted = (sejour: SejourWithDetails) => {
     handlePanelClose();
-    // Optimistically remove
     setSejours((prev) => prev.filter((s) => s.id !== sejour.id));
+    deleteSejourLocal(sejour.id);
     setDeletedSejour(sejour);
-    // Actually delete after toast timeout (unless undone)
   };
 
-  const handleConfirmDelete = useCallback(async () => {
-    if (!deletedSejour) return;
-    try {
-      await fetch(`/api/sejours/${deletedSejour.id}`, { method: 'DELETE' });
-    } catch (err) {
-      console.error('Error deleting:', err);
-    }
+  const handleConfirmDelete = useCallback(() => {
     setDeletedSejour(null);
-  }, [deletedSejour]);
+  }, []);
 
   const handleUndoDelete = () => {
-    // Restore the sejour in the list
     if (deletedSejour) {
+      restoreSejour({
+        id: deletedSejour.id,
+        membre_id: deletedSejour.membre_id,
+        arrivee: deletedSejour.arrivee,
+        depart: deletedSejour.depart,
+        remarque: deletedSejour.remarque,
+        created_at: deletedSejour.created_at,
+      });
       setSejours((prev) => [...prev, deletedSejour]);
     }
     setDeletedSejour(null);
@@ -197,76 +199,117 @@ export default function Calendar() {
   const currentTitle =
     viewMode === 'month'
       ? format(currentDate, 'MMMM yyyy', { locale: fr })
-      : `Semaine du ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'd MMM', { locale: fr })}`;
+      : viewMode === 'week'
+      ? `Semaine du ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'd MMM', { locale: fr })}`
+      : format(currentDate, 'EEEE d MMMM', { locale: fr });
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Campagne</h1>
-          <p className="text-sm text-gray-500">Calendrier de la maison</p>
+      <div className="flex items-center justify-between gap-2 mb-4">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Campagne</h1>
+          <p className="hidden sm:block text-sm text-gray-500">Calendrier de la maison</p>
         </div>
 
-        {/* Identity selector + members management */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowMembresPanel(true)}
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700"
-            aria-label="Gérer les membres"
-            title="Gérer les membres"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-            </svg>
-          </button>
-          <label className="text-xs text-gray-500">Qui êtes-vous ?</label>
-          <select
-            value={currentMembreId || ''}
-            onChange={(e) => saveIdentity(e.target.value)}
-            className="border border-gray-300 rounded-lg px-2 py-1 text-sm text-gray-700 max-w-[180px]"
-          >
-            <option value="">Choisir...</option>
-            {visibleMembres
-              .filter((m) => m.est_permanent)
-              .map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.prenom} {m.famille_nom}
-                </option>
-              ))}
-          </select>
-        </div>
+        <button
+          onClick={() => router.push('/sejours')}
+          className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg shrink-0"
+        >
+          Liste
+        </button>
       </div>
 
-      {/* Toolbar */}
-      <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-        <div className="flex items-center gap-1.5">
+      {/* Nav (pleine largeur) */}
+      <div className="flex items-center gap-1 mb-3">
+        <button
+          onClick={goPrev}
+          className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 shrink-0"
+          aria-label="Précédent"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <div className="relative flex-1 min-w-0" ref={pickerRef}>
           <button
-            onClick={goPrev}
-            className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
-            aria-label="Précédent"
+            onClick={() => setPickerOpen((o) => !o)}
+            className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded-lg hover:bg-gray-100 text-base sm:text-lg font-semibold text-gray-900 capitalize truncate"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <span className="truncate">{currentTitle}</span>
+            <svg className="w-4 h-4 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </button>
-          <h2 className="text-lg font-semibold text-gray-900 capitalize min-w-[180px] text-center">
-            {currentTitle}
-          </h2>
-          <button
-            onClick={goNext}
-            className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
-            aria-label="Suivant"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-          <button onClick={goToday} className="text-sm text-blue-600 hover:text-blue-800 font-medium ml-2">
-            Aujourd&apos;hui
-          </button>
+          {pickerOpen && (
+            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-30 bg-white border border-gray-200 rounded-xl shadow-lg p-3 w-64">
+              <div className="flex items-center justify-between mb-2">
+                <button
+                  onClick={() => setPickerYear((y) => y - 1)}
+                  className="p-1 rounded hover:bg-gray-100 text-gray-600"
+                  aria-label="Année précédente"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <span className="text-sm font-semibold text-gray-900">{pickerYear}</span>
+                <button
+                  onClick={() => setPickerYear((y) => y + 1)}
+                  className="p-1 rounded hover:bg-gray-100 text-gray-600"
+                  aria-label="Année suivante"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-1">
+                {monthLabels.map((label, i) => {
+                  const isCurrent = pickerYear === currentYear && i === currentMonth;
+                  const isToday = pickerYear === todayYear && i === todayMonth;
+                  return (
+                    <button
+                      key={label}
+                      onClick={() => pickMonth(pickerYear, i)}
+                      className={`px-2 py-1.5 rounded text-sm transition-colors ${
+                        isCurrent
+                          ? 'bg-blue-600 text-white font-medium'
+                          : isToday
+                          ? 'bg-blue-50 text-blue-700 font-medium hover:bg-blue-100'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() => {
+                  goToday();
+                  setPickerOpen(false);
+                }}
+                className="w-full mt-2 pt-2 border-t border-gray-100 text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Aujourd&apos;hui
+              </button>
+            </div>
+          )}
         </div>
+        <button
+          onClick={goNext}
+          className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 shrink-0"
+          aria-label="Suivant"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
 
+      {/* Toggle + filtre juste au-dessus du calendrier */}
+      <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
           <button
             onClick={() => setViewMode('month')}
@@ -282,18 +325,35 @@ export default function Calendar() {
               viewMode === 'week' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            Semaine
+            Sem.
+          </button>
+          <button
+            onClick={() => setViewMode('day')}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              viewMode === 'day' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Jour
           </button>
         </div>
-      </div>
-
-      {/* Occupancy legend */}
-      <div className="flex flex-wrap gap-3 mb-3 text-xs text-gray-500">
-        <span className="font-medium">Occupation :</span>
-        <span><span className="inline-block w-2 h-2 rounded-sm bg-[#22c55e] mr-1" />&le; 17 confortable</span>
-        <span><span className="inline-block w-2 h-2 rounded-sm bg-[#f59e0b] mr-1" />18-27 grande maison</span>
-        <span><span className="inline-block w-2 h-2 rounded-sm bg-[#ef4444] mr-1" />28-32 on s&apos;arrange</span>
-        <span><span className="inline-block w-2 h-2 rounded-sm bg-[#991b1b] mr-1" />&gt; 32 dépassement</span>
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+          <button
+            onClick={() => setOnlyWithSejours(false)}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              !onlyWithSejours ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Tous
+          </button>
+          <button
+            onClick={() => setOnlyWithSejours(true)}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              onlyWithSejours ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Séjours
+          </button>
+        </div>
       </div>
 
       {/* Calendar view */}
@@ -305,11 +365,18 @@ export default function Calendar() {
             currentDate={currentDate}
             sejours={sejours}
             membres={visibleMembres}
+            onlyWithSejours={onlyWithSejours}
             onSelectDates={handleSelectDates}
             onEditSejour={handleEditSejour}
           />
-        ) : (
+        ) : viewMode === 'week' ? (
           <WeekView
+            currentDate={currentDate}
+            sejours={sejours}
+            onEditSejour={handleEditSejour}
+          />
+        ) : (
+          <DayView
             currentDate={currentDate}
             sejours={sejours}
             onEditSejour={handleEditSejour}
@@ -317,45 +384,47 @@ export default function Calendar() {
         )}
       </div>
 
-      {/* FAB to create sejour in week view */}
-      {viewMode === 'week' && (
-        <button
-          onClick={() => {
-            setSelectedDates({ start: new Date(), end: new Date() });
-            setEditingSejour(null);
-            setShowPanel(true);
-          }}
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center text-2xl hover:bg-blue-700 z-30"
-          aria-label="Nouveau séjour"
-        >
-          +
-        </button>
-      )}
+      {/* FAB always available */}
+      <button
+        onClick={() => router.push('/sejour/nouveau')}
+        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center text-2xl hover:bg-blue-700 z-30"
+        aria-label="Nouveau séjour"
+      >
+        +
+      </button>
 
-      {/* Sejour panel */}
-      {showPanel && (
+      {/* Liens admin */}
+      <div className="mt-6 border-t border-gray-200 pt-4 flex flex-col gap-2">
+        <button
+          onClick={() => router.push('/membres')}
+          className="text-sm text-blue-600 hover:text-blue-800 font-medium text-left"
+        >
+          Gérer les membres
+        </button>
+        <button
+          onClick={() => router.push('/admin')}
+          className="text-sm text-blue-600 hover:text-blue-800 font-medium text-left"
+        >
+          Affecter les chambres
+        </button>
+      </div>
+
+      {/* Occupancy legend */}
+      <div className="flex flex-col gap-1 mt-6 text-xs text-gray-500">
+        <span className="font-medium">Occupation :</span>
+        <span><span className="inline-block w-2 h-2 rounded-sm bg-[#22c55e] mr-1" />&le; 17 confortable</span>
+        <span><span className="inline-block w-2 h-2 rounded-sm bg-[#f59e0b] mr-1" />18-27 grande maison</span>
+        <span><span className="inline-block w-2 h-2 rounded-sm bg-[#ef4444] mr-1" />28-32 on s&apos;arrange</span>
+        <span><span className="inline-block w-2 h-2 rounded-sm bg-[#991b1b] mr-1" />&gt; 32 dépassement</span>
+      </div>
+
+      {/* Sejour edit modal */}
+      {editingSejour && (
         <SejourPanel
-          familles={familles}
-          membres={visibleMembres}
-          selectedDates={selectedDates}
-          editingSejour={editingSejour}
-          currentMembreId={currentMembreId}
-          preselectedFamilleId={preselectedFamilleId}
+          sejour={editingSejour}
           onClose={handlePanelClose}
-          onCreated={handleCreated}
           onUpdated={handleUpdated}
           onDeleted={handleDeleted}
-          onRefreshMembres={refreshMembres}
-        />
-      )}
-
-      {/* Membres management panel */}
-      {showMembresPanel && (
-        <MembresPanel
-          familles={familles}
-          membres={membres}
-          onClose={() => setShowMembresPanel(false)}
-          onRefresh={refreshMembres}
         />
       )}
 
