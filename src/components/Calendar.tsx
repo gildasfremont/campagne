@@ -14,6 +14,13 @@ import {
   getDefaultMonth,
   fr,
 } from '@/lib/dates';
+import {
+  getFamilles,
+  getMembres,
+  getSejours,
+  deleteSejour as deleteSejourLocal,
+  restoreSejour,
+} from '@/lib/local-store';
 import MonthView from './MonthView';
 import WeekView from './WeekView';
 import SejourPanel from './SejourPanel';
@@ -58,56 +65,38 @@ export default function Calendar() {
     localStorage.setItem('campagne_membre_id', membreId);
   };
 
-  // Fetch static data
+  // Load static data from local store
   useEffect(() => {
-    Promise.all([
-      fetch('/api/familles').then((r) => r.json()),
-      fetch('/api/membres').then((r) => r.json()),
-    ]).then(([fam, mem]) => {
-      setFamilles(fam);
-      setMembres(mem);
-    }).catch((err) => {
-      console.error('Error fetching familles/membres:', err);
-    });
+    setFamilles(getFamilles());
+    setMembres(getMembres());
   }, []);
 
-  // Fetch sejours when date changes
-  const fetchSejours = useCallback(async () => {
+  // Load sejours when date changes
+  const fetchSejours = useCallback(() => {
     setLoading(true);
-    try {
-      let from: string, to: string;
-      if (viewMode === 'month') {
-        from = formatDateParam(startOfMonth(currentDate));
-        to = formatDateParam(endOfMonth(currentDate));
-      } else {
-        from = formatDateParam(startOfWeek(currentDate, { weekStartsOn: 1 }));
-        to = formatDateParam(endOfWeek(currentDate, { weekStartsOn: 1 }));
-      }
-      const res = await fetch(`/api/sejours?from=${from}&to=${to}`);
-      const data = await res.json();
-      setSejours(data);
-    } catch (err) {
-      console.error('Error fetching sejours:', err);
-    } finally {
-      setLoading(false);
+    let from: string, to: string;
+    if (viewMode === 'month') {
+      from = formatDateParam(startOfMonth(currentDate));
+      to = formatDateParam(endOfMonth(currentDate));
+    } else {
+      from = formatDateParam(startOfWeek(currentDate, { weekStartsOn: 1 }));
+      to = formatDateParam(endOfWeek(currentDate, { weekStartsOn: 1 }));
     }
+    setSejours(getSejours(from, to));
+    setLoading(false);
   }, [currentDate, viewMode]);
 
   useEffect(() => {
     fetchSejours();
   }, [fetchSejours]);
 
-  // Refresh membres too (for newly added temp members)
-  const refreshAll = useCallback(async () => {
-    const mem = await fetch('/api/membres').then((r) => r.json());
-    setMembres(mem);
-    await fetchSejours();
+  const refreshAll = useCallback(() => {
+    setMembres(getMembres());
+    fetchSejours();
   }, [fetchSejours]);
 
-  // Refresh only members (without closing panel)
-  const refreshMembres = useCallback(async () => {
-    const mem = await fetch('/api/membres').then((r) => r.json());
-    setMembres(mem);
+  const refreshMembres = useCallback(() => {
+    setMembres(getMembres());
   }, []);
 
   // Navigation
@@ -168,27 +157,27 @@ export default function Calendar() {
     fetchSejours();
   };
 
-  const handleDeleted = async (sejour: SejourWithDetails) => {
+  const handleDeleted = (sejour: SejourWithDetails) => {
     handlePanelClose();
-    // Optimistically remove
     setSejours((prev) => prev.filter((s) => s.id !== sejour.id));
+    deleteSejourLocal(sejour.id);
     setDeletedSejour(sejour);
-    // Actually delete after toast timeout (unless undone)
   };
 
-  const handleConfirmDelete = useCallback(async () => {
-    if (!deletedSejour) return;
-    try {
-      await fetch(`/api/sejours/${deletedSejour.id}`, { method: 'DELETE' });
-    } catch (err) {
-      console.error('Error deleting:', err);
-    }
+  const handleConfirmDelete = useCallback(() => {
     setDeletedSejour(null);
-  }, [deletedSejour]);
+  }, []);
 
   const handleUndoDelete = () => {
-    // Restore the sejour in the list
     if (deletedSejour) {
+      restoreSejour({
+        id: deletedSejour.id,
+        membre_id: deletedSejour.membre_id,
+        arrivee: deletedSejour.arrivee,
+        depart: deletedSejour.depart,
+        remarque: deletedSejour.remarque,
+        created_at: deletedSejour.created_at,
+      });
       setSejours((prev) => [...prev, deletedSejour]);
     }
     setDeletedSejour(null);

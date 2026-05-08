@@ -1,11 +1,13 @@
-export interface FamilleSeed {
+import { Famille, MembreWithFamille } from './types';
+
+interface FamilleSeed {
   nom: string;
   branche: string;
   couleur: string;
   membres: string[];
 }
 
-export const FAMILLES_SEED: FamilleSeed[] = [
+const FAMILLES_SEED: FamilleSeed[] = [
   // --- Branche Antoine ---
   {
     nom: 'Roy (Antoine et Stéphanie)',
@@ -242,3 +244,23 @@ export const FAMILLES_SEED: FamilleSeed[] = [
     membres: ['Quiterie'],
   },
 ];
+
+export const SEED_FAMILLES: Famille[] = FAMILLES_SEED.map((f, i) => ({
+  id: `f-${i}`,
+  nom: f.nom,
+  branche: f.branche,
+  couleur: f.couleur,
+}));
+
+export const SEED_MEMBRES: MembreWithFamille[] = FAMILLES_SEED.flatMap((f, i) =>
+  f.membres.map((prenom, j) => ({
+    id: `m-${i}-${j}`,
+    famille_id: `f-${i}`,
+    prenom,
+    est_permanent: true,
+    est_cache: false,
+    famille_nom: f.nom,
+    branche: f.branche,
+    couleur: f.couleur,
+  }))
+);

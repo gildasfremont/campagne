@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { Famille, MembreWithFamille } from '@/lib/types';
+import { addMembre, updateMembre } from '@/lib/local-store';
 
 interface MembresPanelProps {
   familles: Famille[];
@@ -15,7 +16,6 @@ export default function MembresPanel({ familles, membres, onClose, onRefresh }: 
   const [editName, setEditName] = useState('');
   const [addingFamilleId, setAddingFamilleId] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
-  const [loading, setLoading] = useState<string | null>(null);
 
   // Group members by branche then famille
   const groups = useMemo(() => {
@@ -33,57 +33,24 @@ export default function MembresPanel({ familles, membres, onClose, onRefresh }: 
     setEditName(m.prenom);
   };
 
-  const saveEdit = async () => {
+  const saveEdit = () => {
     if (!editingId || !editName.trim()) return;
-    setLoading(editingId);
-    try {
-      await fetch(`/api/membres/${editingId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prenom: editName.trim() }),
-      });
-      onRefresh();
-    } catch (err) {
-      console.error('Error updating membre:', err);
-    } finally {
-      setLoading(null);
-      setEditingId(null);
-    }
+    updateMembre(editingId, { prenom: editName.trim() });
+    setEditingId(null);
+    onRefresh();
   };
 
-  const toggleCache = async (m: MembreWithFamille) => {
-    setLoading(m.id);
-    try {
-      await fetch(`/api/membres/${m.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ est_cache: !m.est_cache }),
-      });
-      onRefresh();
-    } catch (err) {
-      console.error('Error toggling cache:', err);
-    } finally {
-      setLoading(null);
-    }
+  const toggleCache = (m: MembreWithFamille) => {
+    updateMembre(m.id, { est_cache: !m.est_cache });
+    onRefresh();
   };
 
-  const addMembre = async (familleId: string) => {
+  const handleAddMembre = (familleId: string) => {
     if (!newName.trim()) return;
-    setLoading('new');
-    try {
-      await fetch('/api/membres', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ famille_id: familleId, prenom: newName.trim(), est_permanent: true }),
-      });
-      setNewName('');
-      setAddingFamilleId(null);
-      onRefresh();
-    } catch (err) {
-      console.error('Error adding membre:', err);
-    } finally {
-      setLoading(null);
-    }
+    addMembre({ famille_id: familleId, prenom: newName.trim(), est_permanent: true });
+    setNewName('');
+    setAddingFamilleId(null);
+    onRefresh();
   };
 
   return (
@@ -145,7 +112,6 @@ export default function MembresPanel({ familles, membres, onClose, onRefresh }: 
                             />
                             <button
                               onClick={saveEdit}
-                              disabled={loading === m.id}
                               className="text-xs text-blue-600 hover:text-blue-800 font-medium"
                             >
                               OK
@@ -173,7 +139,6 @@ export default function MembresPanel({ familles, membres, onClose, onRefresh }: 
                             </button>
                             <button
                               onClick={() => toggleCache(m)}
-                              disabled={loading === m.id}
                               className="text-xs text-gray-400 hover:text-gray-600 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                             >
                               {m.est_cache ? 'Afficher' : 'Cacher'}
@@ -196,7 +161,7 @@ export default function MembresPanel({ familles, membres, onClose, onRefresh }: 
                         value={newName}
                         onChange={(e) => setNewName(e.target.value)}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter') addMembre(famille.id);
+                          if (e.key === 'Enter') handleAddMembre(famille.id);
                           if (e.key === 'Escape') setAddingFamilleId(null);
                         }}
                         placeholder="Prénom"
@@ -204,8 +169,7 @@ export default function MembresPanel({ familles, membres, onClose, onRefresh }: 
                         autoFocus
                       />
                       <button
-                        onClick={() => addMembre(famille.id)}
-                        disabled={loading === 'new'}
+                        onClick={() => handleAddMembre(famille.id)}
                         className="text-xs text-blue-600 hover:text-blue-800 font-medium px-2"
                       >
                         Ajouter

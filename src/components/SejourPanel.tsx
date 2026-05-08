@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Famille, MembreWithFamille, SejourWithDetails } from '@/lib/types';
 import { formatDateParam } from '@/lib/dates';
+import { addMembre, createSejours, updateSejour } from '@/lib/local-store';
 
 interface SejourPanelProps {
   familles: Famille[];
@@ -104,65 +105,35 @@ export default function SejourPanel({
     });
   };
 
-  const handleAddTemporaryMember = async () => {
+  const handleAddTemporaryMember = () => {
     if (!newMembreName.trim()) return;
-    try {
-      const res = await fetch('/api/membres', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          famille_id: selectedFamilleId,
-          prenom: newMembreName.trim(),
-          est_permanent: false,
-        }),
-      });
-      if (res.ok) {
-        const created = await res.json();
-        setSelectedMembreIds((prev) => new Set(prev).add(created.id));
-        setNewMembreName('');
-        // Refresh members list without closing the panel
-        onRefreshMembres();
-      }
-    } catch (err) {
-      console.error('Error adding member:', err);
-    }
+    const created = addMembre({
+      famille_id: selectedFamilleId,
+      prenom: newMembreName.trim(),
+      est_permanent: false,
+    });
+    setSelectedMembreIds((prev) => new Set(prev).add(created.id));
+    setNewMembreName('');
+    onRefreshMembres();
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (isEditing) {
       setLoading(true);
-      try {
-        await fetch(`/api/sejours/${editingSejour!.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ arrivee, depart, remarque: remarque || null }),
-        });
-        onUpdated();
-      } catch (err) {
-        console.error('Error updating sejour:', err);
-      } finally {
-        setLoading(false);
-      }
+      updateSejour(editingSejour!.id, { arrivee, depart, remarque: remarque || null });
+      setLoading(false);
+      onUpdated();
     } else {
       if (selectedMembreIds.size === 0) return;
       setLoading(true);
-      try {
-        await fetch('/api/sejours', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            membres: Array.from(selectedMembreIds),
-            arrivee,
-            depart,
-            remarque: remarque || null,
-          }),
-        });
-        onCreated();
-      } catch (err) {
-        console.error('Error creating sejours:', err);
-      } finally {
-        setLoading(false);
-      }
+      createSejours({
+        membres: Array.from(selectedMembreIds),
+        arrivee,
+        depart,
+        remarque: remarque || null,
+      });
+      setLoading(false);
+      onCreated();
     }
   };
 
