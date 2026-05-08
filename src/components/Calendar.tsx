@@ -217,7 +217,7 @@ export default function Calendar() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center justify-between gap-2 mb-3">
+      <div className="flex items-center mb-3">
         <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer min-w-0">
           <input
             type="checkbox"
@@ -227,8 +227,11 @@ export default function Calendar() {
           />
           <span className="truncate">Séjours uniquement</span>
         </label>
+      </div>
 
-        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5 shrink-0">
+      {/* View toggle, juste au-dessus du calendrier */}
+      <div className="flex justify-center mb-2">
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
           <button
             onClick={() => setViewMode('month')}
             className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
