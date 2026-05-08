@@ -167,25 +167,12 @@ export default function Calendar() {
           <p className="hidden sm:block text-sm text-gray-500">Calendrier de la maison</p>
         </div>
 
-        {/* Members management */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            onClick={() => setShowMembresPanel(true)}
-            className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700"
-            aria-label="Gérer les membres"
-            title="Gérer les membres"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-            </svg>
-          </button>
-          <button
-            onClick={() => router.push('/sejour/nouveau')}
-            className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shrink-0"
-          >
-            + Séjour
-          </button>
-        </div>
+        <button
+          onClick={() => router.push('/sejour/nouveau')}
+          className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shrink-0"
+        >
+          + Séjour
+        </button>
       </div>
 
       {/* Nav */}
@@ -287,6 +274,16 @@ export default function Calendar() {
             />
             Afficher uniquement les membres avec séjours
           </label>
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Membres</span>
+          <button
+            onClick={() => setShowMembresPanel(true)}
+            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+          >
+            Gérer les membres
+          </button>
         </div>
       </div>
 
