@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Famille, MembreWithFamille, SejourWithDetails } from '@/lib/types';
 import {
@@ -108,6 +108,41 @@ export default function Calendar() {
 
   const goToday = () => setCurrentDate(new Date());
 
+  // Month picker dropdown
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerYear, setPickerYear] = useState(currentDate.getFullYear());
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setPickerYear(currentDate.getFullYear());
+  }, [currentDate]);
+
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setPickerOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [pickerOpen]);
+
+  const pickMonth = (year: number, month: number) => {
+    setCurrentDate(new Date(year, month, 1));
+    setPickerOpen(false);
+  };
+
+  const monthLabels = [
+    'janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin',
+    'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.',
+  ];
+
+  const todayMonth = new Date().getMonth();
+  const todayYear = new Date().getFullYear();
+  const currentMonth = currentDate.getMonth();
+  const currentYear = currentDate.getFullYear();
+
   // Date selection on calendar → navigate to /sejour/nouveau
   const handleSelectDates = (start: Date, end: Date, membreId?: string) => {
     const params = new URLSearchParams({
@@ -196,9 +231,72 @@ export default function Calendar() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h2 className="flex-1 text-center text-base sm:text-lg font-semibold text-gray-900 capitalize truncate">
-          {currentTitle}
-        </h2>
+        <div className="relative flex-1 min-w-0" ref={pickerRef}>
+          <button
+            onClick={() => setPickerOpen((o) => !o)}
+            className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded-lg hover:bg-gray-100 text-base sm:text-lg font-semibold text-gray-900 capitalize truncate"
+          >
+            <span className="truncate">{currentTitle}</span>
+            <svg className="w-4 h-4 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {pickerOpen && (
+            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-30 bg-white border border-gray-200 rounded-xl shadow-lg p-3 w-64">
+              <div className="flex items-center justify-between mb-2">
+                <button
+                  onClick={() => setPickerYear((y) => y - 1)}
+                  className="p-1 rounded hover:bg-gray-100 text-gray-600"
+                  aria-label="Année précédente"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <span className="text-sm font-semibold text-gray-900">{pickerYear}</span>
+                <button
+                  onClick={() => setPickerYear((y) => y + 1)}
+                  className="p-1 rounded hover:bg-gray-100 text-gray-600"
+                  aria-label="Année suivante"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-1">
+                {monthLabels.map((label, i) => {
+                  const isCurrent = pickerYear === currentYear && i === currentMonth;
+                  const isToday = pickerYear === todayYear && i === todayMonth;
+                  return (
+                    <button
+                      key={label}
+                      onClick={() => pickMonth(pickerYear, i)}
+                      className={`px-2 py-1.5 rounded text-sm transition-colors ${
+                        isCurrent
+                          ? 'bg-blue-600 text-white font-medium'
+                          : isToday
+                          ? 'bg-blue-50 text-blue-700 font-medium hover:bg-blue-100'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() => {
+                  goToday();
+                  setPickerOpen(false);
+                }}
+                className="w-full mt-2 pt-2 border-t border-gray-100 text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Aujourd&apos;hui
+              </button>
+            </div>
+          )}
+        </div>
         <button
           onClick={goNext}
           className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 shrink-0"
@@ -210,20 +308,7 @@ export default function Calendar() {
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center mb-3">
-        <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer min-w-0">
-          <input
-            type="checkbox"
-            checked={onlyWithSejours}
-            onChange={(e) => setOnlyWithSejours(e.target.checked)}
-            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 shrink-0"
-          />
-          <span className="truncate">Séjours uniquement</span>
-        </label>
-      </div>
-
-      {/* Toggle + Auj. juste au-dessus du calendrier */}
+      {/* Toggle + filtre juste au-dessus du calendrier */}
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
           <button
@@ -251,12 +336,24 @@ export default function Calendar() {
             Jour
           </button>
         </div>
-        <button
-          onClick={goToday}
-          className="px-2.5 py-1.5 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg font-medium shrink-0"
-        >
-          Auj.
-        </button>
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+          <button
+            onClick={() => setOnlyWithSejours(false)}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              !onlyWithSejours ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Tous
+          </button>
+          <button
+            onClick={() => setOnlyWithSejours(true)}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              onlyWithSejours ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Séjours
+          </button>
+        </div>
       </div>
 
       {/* Calendar view */}
