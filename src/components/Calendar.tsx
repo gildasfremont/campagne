@@ -185,7 +185,7 @@ export default function Calendar() {
         </button>
       </div>
 
-      {/* Nav */}
+      {/* Nav (pleine largeur) */}
       <div className="flex items-center gap-1 mb-3">
         <button
           onClick={goPrev}
@@ -208,12 +208,6 @@ export default function Calendar() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </button>
-        <button
-          onClick={goToday}
-          className="ml-1 px-2.5 py-1.5 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg font-medium shrink-0"
-        >
-          Aujourd&apos;hui
-        </button>
       </div>
 
       {/* Filters */}
@@ -229,8 +223,8 @@ export default function Calendar() {
         </label>
       </div>
 
-      {/* View toggle, juste au-dessus du calendrier */}
-      <div className="flex justify-center mb-2">
+      {/* Toggle + Auj. juste au-dessus du calendrier */}
+      <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
           <button
             onClick={() => setViewMode('month')}
@@ -257,6 +251,12 @@ export default function Calendar() {
             Jour
           </button>
         </div>
+        <button
+          onClick={goToday}
+          className="px-2.5 py-1.5 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg font-medium shrink-0"
+        >
+          Auj.
+        </button>
       </div>
 
       {/* Calendar view */}
