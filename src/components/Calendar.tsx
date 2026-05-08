@@ -24,11 +24,12 @@ import {
 } from '@/lib/local-store';
 import MonthView from './MonthView';
 import WeekView from './WeekView';
+import DayView from './DayView';
 import SejourPanel from './SejourPanel';
 import MembresPanel from './MembresPanel';
 import Toast from './Toast';
 
-type ViewMode = 'month' | 'week';
+type ViewMode = 'month' | 'week' | 'day';
 
 export default function Calendar() {
   const router = useRouter();
@@ -67,9 +68,12 @@ export default function Calendar() {
     if (viewMode === 'month') {
       from = formatDateParam(startOfMonth(currentDate));
       to = formatDateParam(endOfMonth(currentDate));
-    } else {
+    } else if (viewMode === 'week') {
       from = formatDateParam(startOfWeek(currentDate, { weekStartsOn: 1 }));
       to = formatDateParam(endOfWeek(currentDate, { weekStartsOn: 1 }));
+    } else {
+      from = formatDateParam(currentDate);
+      to = formatDateParam(currentDate);
     }
     setSejours(getSejours(from, to));
     setLoading(false);
@@ -85,16 +89,22 @@ export default function Calendar() {
 
   // Navigation
   const goNext = () => {
-    setCurrentDate((d) => addMonths(d, viewMode === 'month' ? 1 : 0));
-    if (viewMode === 'week') {
+    if (viewMode === 'month') {
+      setCurrentDate((d) => addMonths(d, 1));
+    } else if (viewMode === 'week') {
       setCurrentDate((d) => new Date(d.getTime() + 7 * 24 * 60 * 60 * 1000));
+    } else {
+      setCurrentDate((d) => new Date(d.getTime() + 24 * 60 * 60 * 1000));
     }
   };
 
   const goPrev = () => {
-    setCurrentDate((d) => subMonths(d, viewMode === 'month' ? 1 : 0));
-    if (viewMode === 'week') {
+    if (viewMode === 'month') {
+      setCurrentDate((d) => subMonths(d, 1));
+    } else if (viewMode === 'week') {
       setCurrentDate((d) => new Date(d.getTime() - 7 * 24 * 60 * 60 * 1000));
+    } else {
+      setCurrentDate((d) => new Date(d.getTime() - 24 * 60 * 60 * 1000));
     }
   };
 
@@ -156,7 +166,9 @@ export default function Calendar() {
   const currentTitle =
     viewMode === 'month'
       ? format(currentDate, 'MMMM yyyy', { locale: fr })
-      : `Semaine du ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'd MMM', { locale: fr })}`;
+      : viewMode === 'week'
+      ? `Semaine du ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'd MMM', { locale: fr })}`
+      : format(currentDate, 'EEEE d MMMM', { locale: fr });
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4">
@@ -168,10 +180,10 @@ export default function Calendar() {
         </div>
 
         <button
-          onClick={() => router.push('/sejour/nouveau')}
-          className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shrink-0"
+          onClick={() => router.push('/sejours')}
+          className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg shrink-0"
         >
-          + Séjour
+          Liste
         </button>
       </div>
 
@@ -235,6 +247,14 @@ export default function Calendar() {
           >
             Semaine
           </button>
+          <button
+            onClick={() => setViewMode('day')}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              viewMode === 'day' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Jour
+          </button>
         </div>
       </div>
 
@@ -251,8 +271,14 @@ export default function Calendar() {
             onSelectDates={handleSelectDates}
             onEditSejour={handleEditSejour}
           />
-        ) : (
+        ) : viewMode === 'week' ? (
           <WeekView
+            currentDate={currentDate}
+            sejours={sejours}
+            onEditSejour={handleEditSejour}
+          />
+        ) : (
+          <DayView
             currentDate={currentDate}
             sejours={sejours}
             onEditSejour={handleEditSejour}
@@ -260,16 +286,14 @@ export default function Calendar() {
         )}
       </div>
 
-      {/* FAB to create sejour in week view */}
-      {viewMode === 'week' && (
-        <button
-          onClick={() => router.push('/sejour/nouveau')}
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center text-2xl hover:bg-blue-700 z-30"
-          aria-label="Nouveau séjour"
-        >
-          +
-        </button>
-      )}
+      {/* FAB always available */}
+      <button
+        onClick={() => router.push('/sejour/nouveau')}
+        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center text-2xl hover:bg-blue-700 z-30"
+        aria-label="Nouveau séjour"
+      >
+        +
+      </button>
 
       {/* Membres */}
       <div className="mt-6 border-t border-gray-200 pt-4">
