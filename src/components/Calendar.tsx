@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Famille, MembreWithFamille, SejourWithDetails } from '@/lib/types';
 import {
   format,
@@ -30,6 +31,7 @@ import Toast from './Toast';
 type ViewMode = 'month' | 'week';
 
 export default function Calendar() {
+  const router = useRouter();
   const [currentDate, setCurrentDate] = useState(getDefaultMonth);
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [familles, setFamilles] = useState<Famille[]>([]);
@@ -37,13 +39,8 @@ export default function Calendar() {
   const [sejours, setSejours] = useState<SejourWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Panel state
-  const [showPanel, setShowPanel] = useState(false);
-  const [selectedDates, setSelectedDates] = useState<{ start: Date; end: Date } | null>(null);
+  // Edit modal state
   const [editingSejour, setEditingSejour] = useState<SejourWithDetails | null>(null);
-
-  // localStorage identity
-  const [currentMembreId, setCurrentMembreId] = useState<string | null>(null);
 
   // Membres panel
   const [showMembresPanel, setShowMembresPanel] = useState(false);
@@ -56,17 +53,6 @@ export default function Calendar() {
 
   // Filter hidden members for calendar display
   const visibleMembres = membres.filter((m) => !m.est_cache);
-
-  // Load identity from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem('campagne_membre_id');
-    if (stored) setCurrentMembreId(stored);
-  }, []);
-
-  const saveIdentity = (membreId: string) => {
-    setCurrentMembreId(membreId);
-    localStorage.setItem('campagne_membre_id', membreId);
-  };
 
   // Load static data from local store
   useEffect(() => {
@@ -93,11 +79,6 @@ export default function Calendar() {
     fetchSejours();
   }, [fetchSejours]);
 
-  const refreshAll = useCallback(() => {
-    setMembres(getMembres());
-    fetchSejours();
-  }, [fetchSejours]);
-
   const refreshMembres = useCallback(() => {
     setMembres(getMembres());
   }, []);
@@ -119,40 +100,26 @@ export default function Calendar() {
 
   const goToday = () => setCurrentDate(new Date());
 
-  // Pre-selected family (when user drags on a member row)
-  const [preselectedFamilleId, setPreselectedFamilleId] = useState<string | null>(null);
-
-  // Date selection for creating sejours
+  // Date selection on calendar → navigate to /sejour/nouveau
   const handleSelectDates = (start: Date, end: Date, membreId?: string) => {
-    setSelectedDates({ start, end });
-    setEditingSejour(null);
+    const params = new URLSearchParams({
+      from: formatDateParam(start),
+      to: formatDateParam(end),
+    });
     if (membreId) {
       const membre = membres.find((m) => m.id === membreId);
-      setPreselectedFamilleId(membre?.famille_id ?? null);
-    } else {
-      setPreselectedFamilleId(null);
+      if (membre) params.set('famille', membre.famille_id);
     }
-    setShowPanel(true);
+    router.push(`/sejour/nouveau?${params.toString()}`);
   };
 
-  // Edit sejour
+  // Edit sejour (modal)
   const handleEditSejour = (sejour: SejourWithDetails) => {
     setEditingSejour(sejour);
-    setSelectedDates(null);
-    setShowPanel(true);
   };
 
-  // Panel callbacks
   const handlePanelClose = () => {
-    setShowPanel(false);
     setEditingSejour(null);
-    setSelectedDates(null);
-    setPreselectedFamilleId(null);
-  };
-
-  const handleCreated = () => {
-    handlePanelClose();
-    refreshAll();
   };
 
   const handleUpdated = () => {
@@ -200,7 +167,7 @@ export default function Calendar() {
           <p className="hidden sm:block text-sm text-gray-500">Calendrier de la maison</p>
         </div>
 
-        {/* Identity selector + members management */}
+        {/* Members management */}
         <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={() => setShowMembresPanel(true)}
@@ -212,21 +179,12 @@ export default function Calendar() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
             </svg>
           </button>
-          <select
-            value={currentMembreId || ''}
-            onChange={(e) => saveIdentity(e.target.value)}
-            aria-label="Qui êtes-vous"
-            className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-gray-700 max-w-[140px] sm:max-w-[180px]"
+          <button
+            onClick={() => router.push('/sejour/nouveau')}
+            className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shrink-0"
           >
-            <option value="">Qui êtes-vous ?</option>
-            {visibleMembres
-              .filter((m) => m.est_permanent)
-              .map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.prenom} {m.famille_nom}
-                </option>
-              ))}
-          </select>
+            + Séjour
+          </button>
         </div>
       </div>
 
@@ -321,11 +279,7 @@ export default function Calendar() {
       {/* FAB to create sejour in week view */}
       {viewMode === 'week' && (
         <button
-          onClick={() => {
-            setSelectedDates({ start: new Date(), end: new Date() });
-            setEditingSejour(null);
-            setShowPanel(true);
-          }}
+          onClick={() => router.push('/sejour/nouveau')}
           className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center text-2xl hover:bg-blue-700 z-30"
           aria-label="Nouveau séjour"
         >
@@ -342,17 +296,17 @@ export default function Calendar() {
         <span><span className="inline-block w-2 h-2 rounded-sm bg-[#991b1b] mr-1" />&gt; 32 dépassement</span>
       </div>
 
-      {/* Sejour panel */}
-      {showPanel && (
+      {/* Sejour edit modal */}
+      {editingSejour && (
         <SejourPanel
           familles={familles}
           membres={visibleMembres}
-          selectedDates={selectedDates}
+          selectedDates={null}
           editingSejour={editingSejour}
-          currentMembreId={currentMembreId}
-          preselectedFamilleId={preselectedFamilleId}
+          currentMembreId={null}
+          preselectedFamilleId={null}
           onClose={handlePanelClose}
-          onCreated={handleCreated}
+          onCreated={handlePanelClose}
           onUpdated={handleUpdated}
           onDeleted={handleDeleted}
           onRefreshMembres={refreshMembres}
