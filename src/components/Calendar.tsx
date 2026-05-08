@@ -51,6 +51,9 @@ export default function Calendar() {
   // Undo toast
   const [deletedSejour, setDeletedSejour] = useState<SejourWithDetails | null>(null);
 
+  // Filter to show only members with sejours
+  const [onlyWithSejours, setOnlyWithSejours] = useState(false);
+
   // Filter hidden members for calendar display
   const visibleMembres = membres.filter((m) => !m.est_cache);
 
@@ -256,23 +259,35 @@ export default function Calendar() {
           </button>
         </div>
 
-        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
-          <button
-            onClick={() => setViewMode('month')}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              viewMode === 'month' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Mois
-          </button>
-          <button
-            onClick={() => setViewMode('week')}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              viewMode === 'week' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Semaine
-          </button>
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={onlyWithSejours}
+              onChange={(e) => setOnlyWithSejours(e.target.checked)}
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            Séjours uniquement
+          </label>
+
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+            <button
+              onClick={() => setViewMode('month')}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'month' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Mois
+            </button>
+            <button
+              onClick={() => setViewMode('week')}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'week' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Semaine
+            </button>
+          </div>
         </div>
       </div>
 
@@ -285,6 +300,7 @@ export default function Calendar() {
             currentDate={currentDate}
             sejours={sejours}
             membres={visibleMembres}
+            onlyWithSejours={onlyWithSejours}
             onSelectDates={handleSelectDates}
             onEditSejour={handleEditSejour}
           />

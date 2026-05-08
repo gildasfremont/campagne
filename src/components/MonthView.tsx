@@ -17,6 +17,7 @@ interface MonthViewProps {
   currentDate: Date;
   sejours: SejourWithDetails[];
   membres: MembreWithFamille[];
+  onlyWithSejours?: boolean;
   onSelectDates: (start: Date, end: Date, membreId?: string) => void;
   onEditSejour: (sejour: SejourWithDetails) => void;
 }
@@ -30,16 +31,16 @@ interface MembreRow {
   sejours: SejourWithDetails[];
 }
 
-export default function MonthView({ currentDate, sejours, membres, onSelectDates, onEditSejour }: MonthViewProps) {
+export default function MonthView({ currentDate, sejours, membres, onlyWithSejours, onSelectDates, onEditSejour }: MonthViewProps) {
   const days = useMemo(() => getMonthDays(currentDate), [currentDate]);
   const [selectionStart, setSelectionStart] = useState<number | null>(null);
   const [selectionEnd, setSelectionEnd] = useState<number | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionMembreId, setSelectionMembreId] = useState<string | null>(null);
-  const [collapsedBranches, setCollapsedBranches] = useState<Set<string>>(new Set());
+  const [expandedBranches, setExpandedBranches] = useState<Set<string>>(new Set());
 
   const toggleBranche = (branche: string) => {
-    setCollapsedBranches((prev) => {
+    setExpandedBranches((prev) => {
       const next = new Set(prev);
       if (next.has(branche)) next.delete(branche);
       else next.add(branche);
@@ -64,6 +65,7 @@ export default function MonthView({ currentDate, sejours, membres, onSelectDates
 
     const memberRows: MembreRow[] = membres
       .filter((m) => m.est_permanent)
+      .filter((m) => !onlyWithSejours || (sejoursByMembre.get(m.id)?.length ?? 0) > 0)
       .map((m) => ({
         id: m.id,
         prenom: m.prenom,
@@ -98,7 +100,7 @@ export default function MonthView({ currentDate, sejours, membres, onSelectDates
     });
 
     return memberRows;
-  }, [membres, sejours]);
+  }, [membres, sejours, onlyWithSejours]);
 
   // Group rows by branche for section headers
   const brancheGroups = useMemo(() => {
@@ -204,7 +206,7 @@ export default function MonthView({ currentDate, sejours, membres, onSelectDates
 
         {/* Members grouped by branche */}
         {brancheGroups.map((group) => {
-          const isCollapsed = collapsedBranches.has(group.branche);
+          const isExpanded = expandedBranches.has(group.branche);
           return (
           <div key={group.branche}>
             {/* Branche header */}
@@ -214,7 +216,7 @@ export default function MonthView({ currentDate, sejours, membres, onSelectDates
               className="w-full flex border-b border-gray-200 bg-gray-50 hover:bg-gray-100 text-left"
             >
               <div className="w-32 shrink-0 px-2 py-1 flex items-center gap-1">
-                <span className="text-gray-500 text-[10px] w-3">{isCollapsed ? '▶' : '▼'}</span>
+                <span className="text-gray-500 text-[10px] w-3">{isExpanded ? '▼' : '▶'}</span>
                 <span className="text-xs font-semibold text-gray-600 truncate">{group.branche}</span>
                 <span className="text-[10px] text-gray-400 ml-1">({group.rows.length})</span>
               </div>
@@ -222,7 +224,7 @@ export default function MonthView({ currentDate, sejours, membres, onSelectDates
             </button>
 
             {/* Member rows */}
-            {!isCollapsed && group.rows.map((member) => (
+            {isExpanded && group.rows.map((member) => (
               <div key={member.id} className="flex border-b border-gray-100 hover:bg-gray-50/50">
                 <div
                   className="w-32 shrink-0 px-2 py-1.5 text-xs truncate flex items-center gap-1"
