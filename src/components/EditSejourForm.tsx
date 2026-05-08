@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { SejourWithDetails } from '@/lib/types';
 import { getSejours, updateSejour, deleteSejour as deleteLocal } from '@/lib/local-store';
 import { differenceInDays, format, fr, parseISO } from '@/lib/dates';
+import DateRangeField from './DateRangeField';
 
 export default function EditSejourForm() {
   const params = useParams();
@@ -117,25 +118,16 @@ export default function EditSejourForm() {
       </div>
 
       {/* Dates */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Arrivée</label>
-          <input
-            type="date"
-            value={arrivee}
-            onChange={(e) => setArrivee(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Départ</label>
-          <input
-            type="date"
-            value={depart}
-            onChange={(e) => setDepart(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
-          />
-        </div>
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Période</label>
+        <DateRangeField
+          arrivee={arrivee}
+          depart={depart}
+          onChange={(a, d) => {
+            setArrivee(a);
+            setDepart(d);
+          }}
+        />
       </div>
 
       {/* Remarque */}

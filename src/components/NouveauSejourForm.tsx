@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Famille, MembreWithFamille } from '@/lib/types';
 import { getFamilles, getMembres, addMembre, createSejours } from '@/lib/local-store';
+import DateRangeField from './DateRangeField';
 
 const IDENTITY_KEY = 'campagne_membre_id';
 
@@ -150,25 +151,16 @@ export default function NouveauSejourForm() {
       </div>
 
       {/* Dates */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Arrivée</label>
-          <input
-            type="date"
-            value={arrivee}
-            onChange={(e) => setArrivee(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Départ</label>
-          <input
-            type="date"
-            value={depart}
-            onChange={(e) => setDepart(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
-          />
-        </div>
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Période</label>
+        <DateRangeField
+          arrivee={arrivee}
+          depart={depart}
+          onChange={(a, d) => {
+            setArrivee(a);
+            setDepart(d);
+          }}
+        />
       </div>
 
       {/* Famille */}
